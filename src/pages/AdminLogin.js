@@ -23,22 +23,28 @@ function AdminLogin() {
   };
 
   return (
-    <main className="Container">
-      <h2>Admin Login</h2>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      <form onSubmit={submit} className="Form">
-        <label>
-          Email
-          <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        </label>
-        <label>
-          Password
-          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        </label>
-        <button className="Btn" type="submit">Login</button>
-      </form>
-      <div className="Muted" style={{ marginTop: '0.75rem' }}>
-        Test admin: admin@vefruit.local / admin123
+    <main className="Container AuthLayout">
+      <div className="Card AuthCard">
+        <div className="CardBody">
+          <h2 className="AuthTitle">Admin Login</h2>
+          {error && <p style={{ color: 'crimson' }}>{error}</p>}
+          <form onSubmit={submit} className="Form">
+            <label>
+              Email
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            </label>
+            <label>
+              Password
+              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            </label>
+            <div className="FormActions">
+              <button className="Btn" type="submit">Login</button>
+            </div>
+          </form>
+          <div className="Muted" style={{ marginTop: '0.75rem' }}>
+            Test admin: admin@vefruit.local / admin123
+          </div>
+        </div>
       </div>
     </main>
   );

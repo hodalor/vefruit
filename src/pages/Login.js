@@ -19,20 +19,26 @@ function Login() {
   };
 
   return (
-    <main className="Container">
-      <h2>Login</h2>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      <form onSubmit={submit} className="Form">
-        <label>
-          Email
-          <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        </label>
-        <label>
-          Password
-          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        </label>
-        <button className="Btn" type="submit">Login</button>
-      </form>
+    <main className="Container AuthLayout">
+      <div className="Card AuthCard">
+        <div className="CardBody">
+          <h2 className="AuthTitle">Login</h2>
+          {error && <p style={{ color: 'crimson' }}>{error}</p>}
+          <form onSubmit={submit} className="Form">
+            <label>
+              Email
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            </label>
+            <label>
+              Password
+              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            </label>
+            <div className="FormActions">
+              <button className="Btn" type="submit">Login</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </main>
   );
 }

@@ -22,31 +22,37 @@ function Register() {
   };
 
   return (
-    <main className="Container">
-      <h2>Register</h2>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
-      <form onSubmit={submit} className="Form">
-        <label>
-          Name
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-        </label>
-        <label>
-          Email
-          <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
-        </label>
-        <label>
-          Password
-          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
-        </label>
-        <label>
-          Role
-          <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            <option value="buyer">Buyer</option>
-            <option value="seller">Seller</option>
-          </select>
-        </label>
-        <button className="Btn" type="submit">Register</button>
-      </form>
+    <main className="Container AuthLayout">
+      <div className="Card AuthCard">
+        <div className="CardBody">
+          <h2 className="AuthTitle">Register</h2>
+          {error && <p style={{ color: 'crimson' }}>{error}</p>}
+          <form onSubmit={submit} className="Form">
+            <label>
+              Name
+              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            </label>
+            <label>
+              Email
+              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            </label>
+            <label>
+              Password
+              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            </label>
+            <label>
+              Role
+              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                <option value="buyer">Buyer</option>
+                <option value="seller">Seller</option>
+              </select>
+            </label>
+            <div className="FormActions">
+              <button className="Btn" type="submit">Register</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </main>
   );
 }
