@@ -1,38 +1,266 @@
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", Arial,
+    sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+}
+
+.Header {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: #fff;
+}
+
+.Container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.Landing h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.Grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.Card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.Card img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+}
+
+.CardBody {
+  padding: 0.75rem 1rem 1rem;
+}
+
+.Card h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.1rem;
+}
+
+.Muted {
+  color: #64748b;
+  margin: 0.25rem 0 0.5rem 0;
+}
+
+.Price {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.Footer {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  color: #64748b;
+  border-top: 1px solid #e2e8f0;
+}
+
+.HeaderBar { border-bottom: 1px solid #e2e8f0; background: #fff; }
+.HeaderInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
   align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+
+.Brand a {
+  font-weight: 800;
+  font-size: 1.25rem;
+  text-decoration: none;
+  color: #0f172a;
+}
+
+.SearchForm { display: flex; gap: 0.5rem; }
+.SearchInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.SearchButton {
+  padding: 0.5rem 0.9rem;
+  border: none;
+  background: #f59e0b;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.TopActions { display: flex; gap: 1rem; align-items: center; }
+.TopActions a { color: #0f172a; text-decoration: none; font-weight: 600; }
+
+.Account { position: relative; }
+.AccountBtn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.Caret { display: inline-block; margin-left: 6px; transition: transform 120ms ease; }
+.AccountBtn[data-open="true"] .Caret { transform: rotate(180deg); }
+.Dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  border-radius: 10px;
+  padding: 0.4rem;
+  z-index: 20;
+}
+.DropdownItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #0f172a;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.DropdownItem:hover { background: #f1f5f9; }
+
+.Card { cursor: pointer; color: inherit; text-decoration: none; }
+
+.Nav {
+  display: flex;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  gap: 1rem;
+  margin-top: 0.5rem;
 }
 
-.App-link {
-  color: #61dafb;
+.Nav a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.Btn {
+  appearance: none;
+  border: none;
+  background: #16a34a;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
 }
+
+.BtnDanger {
+  appearance: none;
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.BtnOutline {
+  appearance: none;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.CartList { display: grid; gap: 0.75rem; }
+.CartItem { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 8px; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; }
+.CartDetails { display: flex; gap: 0.75rem; align-items: baseline; }
+.CartControls { display: flex; gap: 0.5rem; align-items: center; }
+.CartControls input { width: 64px; }
+.CartTotal { display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+.OrderCard { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
+.OrderHeader { display: flex; justify-content: space-between; color: #334155; margin-bottom: 0.5rem; }
+.OrderTotal { margin-top: 0.5rem; font-weight: 600; color: #16a34a; }
+
+/* Seller dashboard */
+.SellerLayout { display: grid; grid-template-columns: 220px 1fr; gap: 1rem; align-items: start; }
+.Sidebar { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem; position: sticky; top: 12px; }
+.SidebarHeader { margin-bottom: 0.75rem; }
+.Menu { display: grid; gap: 0.5rem; }
+.MenuItem { appearance: none; border: 1px solid #e2e8f0; background: #fff; color: #0f172a; padding: 0.5rem 0.75rem; border-radius: 8px; text-align: left; cursor: pointer; }
+.MenuItem.active { background: #f1f5f9; }
+.Content { background: transparent; }
+.SectionTitle { margin: 0 0 0.75rem 0; }
+.StatGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; }
+.StatCard { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.75rem; }
+.StatLabel { color: #334155; font-size: 0.9rem; }
+.StatValue { margin-top: 0.25rem; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
+.ChartBars { display: grid; gap: 0.5rem; }
+.BarRow { display: grid; grid-template-columns: 64px 1fr 40px; gap: 0.5rem; align-items: center; }
+.Bar { height: 10px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+.BarFill { height: 100%; background: #16a34a; }
+.BarLabel { color: #64748b; font-size: 0.8rem; }
+.BarValue { text-align: right; color: #334155; font-size: 0.85rem; }
+
+.Thumbs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.Thumb { display: grid; gap: 0.25rem; justify-items: center; }
+.Thumb img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #e2e8f0; border-radius: 8px; }
+
+.EditOverlay { position: fixed; inset: 0; background: rgba(2,6,23,0.4); display: grid; place-items: center; z-index: 50; }
+.EditModal { max-width: 800px; width: calc(100% - 2rem); }
+
+/* Line chart */
+.Chart { display: grid; gap: 0.5rem; }
+.ChartSvg { width: 100%; height: 160px; }
+.ChartLine { fill: none; stroke: #16a34a; stroke-width: 2; }
+.ChartArea { fill: rgba(22, 163, 74, 0.15); stroke: none; }
+.ChartDot { fill: #16a34a; }
+.ChartAxis { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.25rem; align-items: start; }
+.AxisTick { display: grid; justify-items: center; }
+.AxisLabel { color: #64748b; font-size: 0.75rem; }
+.AxisValue { color: #334155; font-size: 0.8rem; }
+
+.Tooltip { position: absolute; transform: translate(-50%, -120%); background: #0f172a; color: #fff; padding: 0.3rem 0.45rem; border-radius: 6px; font-size: 0.75rem; pointer-events: none; white-space: nowrap; box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+.TooltipInner { display: grid; gap: 2px; }
+
+/* Pie & legend */
+.PieSvg { width: 100%; height: 180px; }
+.Legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.25rem; align-items: center; }
+.LegendItem { display: flex; gap: 0.5rem; align-items: center; justify-content: center; color: #334155; }
+.LegendItem strong { margin-left: auto; font-weight: 700; color: #0f172a; }
+.LegendSwatch { width: 10px; height: 10px; border-radius: 2px; }
+.HeroLayout { display: grid; grid-template-columns: 220px 1fr 220px; gap: 1rem; align-items: stretch; margin-bottom: 1.25rem; }
+.LeftMenu { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; }
+.LeftMenu h4 { margin: 0 0 0.5rem 0; }
+.LeftMenu ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.4rem; }
+.LeftMenu li { color: #334155; }
+.HeroSlider { position: relative; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+.HeroSlide { position: relative; }
+.HeroImg { width: 100%; height: 380px; object-fit: cover; display: block; }
+.HeroCaption { position: absolute; left: 16px; bottom: 16px; background: rgba(2,6,23,0.55); color: #fff; padding: 0.5rem 0.75rem; border-radius: 8px; }
+.HeroPrev, .HeroNext { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.8); border: 1px solid #e2e8f0; width: 32px; height: 32px; border-radius: 999px; cursor: pointer; }
+.HeroPrev { left: 10px; }
+.HeroNext { right: 10px; }
+.HeroDots { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; }
+.HeroDot { width: 8px; height: 8px; border-radius: 999px; background: #e2e8f0; border: none; cursor: pointer; }
+.HeroDot.active { background: #16a34a; }
+.QuickCards { display: grid; gap: 0.75rem; }
+.QuickCard { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; display: grid; gap: 0.25rem; }
