@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 const UserAuthContext = createContext();
 const USERS_KEY = 'vefruit_users_v1';
@@ -34,6 +34,7 @@ function writeUsers(list) {
 
 export function UserAuthProvider({ children }) {
   const [users, setUsers] = useState(readUsers);
+  const seededRef = useRef(false);
   const [current, setCurrent] = useState(() => {
     try {
       const raw = localStorage.getItem(CURRENT_USER_KEY);
@@ -44,6 +45,20 @@ export function UserAuthProvider({ children }) {
   });
 
   useEffect(() => { writeUsers(users); }, [users]);
+  useEffect(() => {
+    if (seededRef.current) return;
+    (async () => {
+      try {
+        const hasAdmin = users.some((u) => u.role === 'admin');
+        if (!hasAdmin) {
+          const pw = await hashPassword('admin123');
+          const admin = { id: Date.now(), name: 'Admin', email: 'admin@vefruit.local', password: pw, role: 'admin', isVerified: true, createdAt: new Date().toISOString() };
+          setUsers((prev) => [admin, ...prev]);
+        }
+      } catch {}
+      seededRef.current = true;
+    })();
+  }, [users]);
   useEffect(() => {
     try {
       if (current) localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(current));
@@ -79,7 +94,23 @@ export function UserAuthProvider({ children }) {
 
   const logout = () => setCurrent(null);
 
-  const value = { users, current, register, login, logout };
+  const updateUser = (id, patch) => {
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === id ? { ...u, ...patch } : u));
+      const cur = updated.find((u) => u.id === current?.id);
+      if (cur && cur.id === id) {
+        try { localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(cur)); } catch {}
+      }
+      return updated;
+    });
+  };
+
+  const deleteUser = (id) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    if (current?.id === id) setCurrent(null);
+  };
+
+  const value = { users, current, register, login, logout, updateUser, deleteUser };
   return <UserAuthContext.Provider value={value}>{children}</UserAuthContext.Provider>;
 }
 

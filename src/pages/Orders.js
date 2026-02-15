@@ -4,7 +4,7 @@ import { loadProducts } from '../products/productService';
 
 function Orders() {
   const [orders, setOrders] = useState(() => loadOrders());
-  const productsMap = useMemo(() => new Map(loadProducts().map((p) => [p.id, p])), [orders]);
+  const productsMap = useMemo(() => new Map(loadProducts().map((p) => [p.id, p])), []);
   const refresh = () => setOrders(loadOrders());
   return (
     <main className="Container">

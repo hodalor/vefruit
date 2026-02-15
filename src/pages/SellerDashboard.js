@@ -159,6 +159,22 @@ function SellerDashboard() {
     );
   }
 
+  if (!current.approved || current.status === 'suspended' || current.status === 'blocked') {
+    return (
+      <main className="Container">
+        <h2>Seller Dashboard</h2>
+        <div className="Card">
+          <div className="CardBody">
+            <p className="Muted">Status: {current.status || (current.approved ? 'approved' : 'pending')}</p>
+            {!current.approved && <p>Your account is pending approval. You cannot add products yet.</p>}
+            {current.status === 'suspended' && <p>Your account is suspended. Please contact support.</p>}
+            {current.status === 'blocked' && <p>Your account is blocked. Please contact support.</p>}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   const submitProduct = (e) => {
     e.preventDefault();
     const created = addProduct({

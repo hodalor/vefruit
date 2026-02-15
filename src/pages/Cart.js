@@ -5,7 +5,7 @@ import { loadProducts } from '../products/productService';
 
 function Cart() {
   const { items, updateQty, removeItem, total } = useCart();
-  const productsMap = useMemo(() => new Map(loadProducts().map((p) => [p.id, p])), [items]);
+  const productsMap = useMemo(() => new Map(loadProducts().map((p) => [p.id, p])), []);
   return (
     <main className="Container">
       <h2>Your Cart</h2>

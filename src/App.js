@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import HeaderBar from './components/HeaderBar';
 import Admin from './pages/Admin';
 import ProductDetail from './pages/ProductDetail';
+import AdminLogin from './pages/AdminLogin';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="/seller/login" element={<SellerLogin />} />
         <Route path="/seller/dashboard" element={<SellerDashboard />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/admin/login" element={<AdminLogin />} />
       </Routes>
       <footer className="Footer">
         <small>© {new Date().getFullYear()} veFruit</small>
