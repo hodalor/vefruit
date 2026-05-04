@@ -283,3 +283,615 @@
 .HeroDot.active { background: #16a34a; }
 .QuickCards { display: grid; gap: 0.75rem; }
 .QuickCard { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem; display: grid; gap: 0.25rem; }
+.CategoryLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: inherit;
+  text-decoration: none;
+  padding: 0.35rem 0;
+}
+
+.CategoryLink strong {
+  min-width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef2ff;
+  color: #2f67dc;
+  font-size: 0.82rem;
+}
+
+/* Admin dashboard */
+.AdminShell {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  background: #eef2ff;
+}
+
+.AdminSidebar {
+  background: linear-gradient(180deg, #2b0050 0%, #3a0064 100%);
+  color: #fff;
+  padding: 1.25rem 1rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.AdminSidebarBrand {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.AdminSidebarBrand p {
+  margin: 0.15rem 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.88rem;
+}
+
+.AdminSidebarLogo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: linear-gradient(135deg, #6d28d9, #2563eb);
+}
+
+.AdminSidebarGroup {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.AdminSidebarTitle {
+  padding: 0 0.4rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.AdminSidebarMenu {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.AdminSidebarSubmenu {
+  display: grid;
+  gap: 0.45rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  margin-left: 0.75rem;
+}
+
+.AdminSidebarButton {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #fff;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.AdminSidebarButton:hover,
+.AdminSidebarButton.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(2px);
+}
+
+.AdminSidebarButton.compact {
+  padding: 0.85rem 0.9rem;
+  border-radius: 14px;
+  font-size: 0.97rem;
+}
+
+.AdminSidebarToggle {
+  font-size: 1rem;
+}
+
+.AdminSidebarArrow {
+  transition: transform 0.2s ease;
+}
+
+.AdminSidebarArrow.open {
+  transform: rotate(180deg);
+}
+
+.AdminSidebarCount {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: #ff5d6c;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.AdminMain {
+  padding: 1.5rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.AdminBreadcrumb {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #dbe3f6;
+  border-radius: 16px;
+  padding: 0.7rem 1rem;
+  color: #475569;
+  font-weight: 700;
+}
+
+.AdminHeading h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.AdminSubtle {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+  max-width: 720px;
+}
+
+.AdminNotice {
+  background: #ecfdf5;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+}
+
+.AdminDashboard,
+.AdminStack {
+  display: grid;
+  gap: 1rem;
+}
+
+.AdminFilterBar {
+  border-radius: 22px;
+}
+
+.AdminFilterGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.AdminFilterGrid label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.AdminMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(170px, 1fr));
+  gap: 1rem;
+}
+
+.AdminMetricCard {
+  background: #fff;
+  border-radius: 22px;
+  padding: 1rem 1rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.AdminMetricCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--metric-color, #2563eb);
+}
+
+.AdminMetricCardTop {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.AdminMetricLabel {
+  color: #64748b;
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+
+.AdminMetricValue {
+  margin-top: 0.65rem;
+  font-size: 2rem;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.AdminMetricMeta {
+  margin: 0.75rem 0 0;
+  color: #64748b;
+  min-height: 2.4em;
+}
+
+.AdminMetricBadge {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  color: var(--metric-color, #2563eb);
+  background: color-mix(in srgb, var(--metric-color, #2563eb) 16%, white);
+}
+
+.AdminMetricStripe {
+  height: 4px;
+  margin-top: 0.9rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--metric-color, #2563eb), rgba(255, 255, 255, 0));
+}
+
+.AdminMetricCard--blue { --metric-color: #2f67dc; }
+.AdminMetricCard--orange { --metric-color: #f59e0b; }
+.AdminMetricCard--teal { --metric-color: #0f766e; }
+.AdminMetricCard--green { --metric-color: #22c55e; }
+.AdminMetricCard--pink { --metric-color: #ec4899; }
+.AdminMetricCard--purple { --metric-color: #8b5cf6; }
+
+.AdminChartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.AdminChartGridPrimary {
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+}
+
+.AdminChartCard {
+  background: #fff;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.AdminChartHeader {
+  padding: 1rem 1.25rem 0;
+}
+
+.AdminChartHeader h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.AdminChartBody {
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.AdminChartCanvasWrap {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.AdminLineSvg {
+  width: 100%;
+  height: 300px;
+}
+
+.AdminGridLine {
+  stroke: #dbe3f6;
+  stroke-width: 1;
+}
+
+.AdminAreaShape {
+  fill: rgba(47, 103, 220, 0.16);
+  stroke: none;
+}
+
+.AdminLineShape {
+  fill: none;
+  stroke: #2f67dc;
+  stroke-width: 3;
+}
+
+.AdminLineDot {
+  fill: #2f67dc;
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.AdminChartAxis {
+  display: grid;
+  gap: 0.35rem;
+  overflow-x: auto;
+}
+
+.AdminDonutWrap {
+  display: grid;
+  gap: 1rem;
+}
+
+.AdminDonutValue {
+  font-size: 1.35rem;
+  font-weight: 900;
+  fill: #0f172a;
+}
+
+.AdminDonutLabel {
+  font-size: 0.84rem;
+  fill: #64748b;
+}
+
+.AdminBarRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 170px) 1fr minmax(60px, auto);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.AdminColumnChart {
+  height: 100%;
+}
+
+.AdminColumnBars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  min-height: 280px;
+}
+
+.AdminColumn {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+}
+
+.AdminColumnValue {
+  color: #334155;
+  font-weight: 800;
+}
+
+.AdminColumnTrack {
+  width: 28px;
+  height: 190px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  display: flex;
+  align-items: end;
+  overflow: hidden;
+}
+
+.AdminColumnFill {
+  width: 100%;
+  border-radius: 999px;
+}
+
+.AdminColumnLabel {
+  text-align: center;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.AdminPerformanceGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr);
+  gap: 1rem;
+}
+
+.AdminTableWrap {
+  overflow-x: auto;
+}
+
+.AdminTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+}
+
+.AdminTable th,
+.AdminTable td {
+  padding: 0.85rem 0.9rem;
+  text-align: left;
+}
+
+.AdminTable thead {
+  background: #eef2ff;
+}
+
+.AdminTable tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.AdminEmptyCell {
+  text-align: center;
+  color: #64748b;
+}
+
+.AdminSectionHeader {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.AdminFormGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.AdminFormGrid label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.AdminFieldWide {
+  grid-column: 1 / -1;
+}
+
+.AdminButtonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.AdminAlignEnd {
+  justify-content: flex-end;
+}
+
+.AdminFormActions {
+  grid-column: 1 / -1;
+}
+
+.AdminUploadButton {
+  position: relative;
+  overflow: hidden;
+}
+
+.AdminUploadButton input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.AdminInlineField {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+  justify-content: space-between;
+}
+
+.AdminOrdersList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.AdminPillRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.65rem 0 0.9rem;
+}
+
+.AdminPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #334155;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.AdminSearchGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.AdminCategoryList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.AdminCategoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  background: #f8fafc;
+}
+
+.AdminSettingsTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.AdminSettingsTabActive {
+  border-color: #2f67dc;
+  color: #2f67dc;
+}
+
+.AdminProductForm {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.AdminModalMedium {
+  max-width: 920px;
+}
+
+@media (max-width: 1200px) {
+  .AdminShell {
+    grid-template-columns: 240px minmax(0, 1fr);
+  }
+
+  .AdminMetricGrid {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  .AdminShell {
+    grid-template-columns: 1fr;
+  }
+
+  .AdminSidebar {
+    position: static;
+  }
+
+  .AdminChartGrid,
+  .AdminChartGridPrimary,
+  .AdminPerformanceGrid,
+  .AdminSearchGrid,
+  .AdminFilterGrid,
+  .AdminFormGrid,
+  .AdminMetricGrid {
+    grid-template-columns: 1fr;
+  }
+}

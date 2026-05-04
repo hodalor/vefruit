@@ -22,7 +22,7 @@ function SellerRegister() {
     <main className="Container AuthLayout">
       <div className="Card AuthCard">
         <div className="CardBody">
-          <h2 className="AuthTitle">Seller Registration</h2>
+          <h2 className="AuthTitle">Farmer Registration</h2>
           {error && <p style={{ color: 'crimson' }}>{error}</p>}
           <form onSubmit={submit} className="Form">
             <label>

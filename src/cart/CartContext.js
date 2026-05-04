@@ -26,8 +26,9 @@ export function CartProvider({ children }) {
       const existing = prev.find((i) => i.id === product.id);
       const prod = loadProducts().find((p) => p.id === product.id);
       const inv = Number(prod?.inventory ?? prod?.quantity ?? Infinity);
+      const safeQty = Math.max(1, Number(qty) || 1);
       if (existing) {
-        const newQty = Math.min(inv, existing.qty + qty);
+        const newQty = Math.min(inv, existing.qty + safeQty);
         return prev.map((i) => (i.id === product.id ? { ...i, qty: newQty } : i));
       }
       return [
@@ -36,7 +37,7 @@ export function CartProvider({ children }) {
           id: product.id,
           name: product.name,
           price: product.price,
-          qty: Math.min(inv, qty),
+          qty: Math.min(inv, safeQty),
           sellerId: product.sellerId || null,
         },
       ];

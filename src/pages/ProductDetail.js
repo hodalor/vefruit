@@ -12,6 +12,7 @@ function ProductDetail() {
   const { current } = useUserAuth();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
+  const maxQty = Number(product?.inventory ?? product?.quantity ?? 99);
 
   const src = (() => {
     const base = product ? (product.image || (product.images && product.images[0]) || 'https://placehold.co/600x400?text=Product') : 'https://placehold.co/600x400?text=Product';
@@ -28,7 +29,7 @@ function ProductDetail() {
       navigate('/register?role=buyer');
       return;
     }
-    addItem(product, qty);
+    addItem(product, Math.max(1, Math.min(Number(qty) || 1, maxQty || 1)));
     navigate('/cart');
   };
 
@@ -68,15 +69,15 @@ function ProductDetail() {
                 <input
                   type="number"
                   min={1}
-                  max={Number(product.inventory ?? product.quantity ?? 99)}
+                  max={maxQty}
                   value={qty}
-                  onChange={(e) => setQty(Math.max(1, Math.min(Number(e.target.value || 1), Number(product.inventory ?? product.quantity ?? 99))))}
+                  onChange={(e) => setQty(Math.max(1, Math.min(Number(e.target.value || 1), maxQty)))}
                 />
               </label>
-              <span className="Muted">Max {Number(product.inventory ?? product.quantity ?? 99)}</span>
+              <span className="Muted">Max {maxQty}</span>
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-              <button className="Btn" onClick={add} disabled={Number(product.inventory ?? 0) < 1}>Add to Cart</button>
+              <button className="Btn" onClick={add} disabled={maxQty < 1}>Add to Cart</button>
               <button className="BtnOutline" onClick={() => navigate('/')}>Continue Shopping</button>
             </div>
           </div>

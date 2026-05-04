@@ -3,9 +3,12 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import { loadHeroSlides } from '../hero/heroService';
+import useCategories from '../categories/useCategories';
+import { formatCategoryLabel } from '../categories/categoryService';
 
 function Home() {
   const products = useProducts();
+  const categories = useCategories();
   const { sellers } = useSellerAuth();
   const [params] = useSearchParams();
   const q = (params.get('q') || '').toLowerCase();
@@ -37,16 +40,28 @@ function Home() {
         );
       })
     : products;
+  const categoryCounts = useMemo(() => {
+    const counts = new Map();
+    products.forEach((product) => {
+      const key = String(product.category || '').toLowerCase();
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return counts;
+  }, [products]);
   return (
     <main className="Container">
       <section className="HeroLayout">
         <aside className="LeftMenu">
           <h4>Categories</h4>
           <ul>
-            <li>Fruit</li>
-            <li>Vegetable</li>
-            <li>Organic</li>
-            <li>Fresh Picks</li>
+            {categories.map((category) => (
+              <li key={category}>
+                <Link to={`/?q=${encodeURIComponent(category)}`} className="CategoryLink">
+                  <span>{formatCategoryLabel(category)}</span>
+                  <strong>{categoryCounts.get(category) || 0}</strong>
+                </Link>
+              </li>
+            ))}
           </ul>
         </aside>
         <div className="HeroSlider">

@@ -1,10 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { addProduct, productsBySeller, updateProduct, loadProducts, deleteProduct } from '../products/productService';
 import { loadOrders, updateOrderStatus } from '../orders/orderService';
+import useCategories from '../categories/useCategories';
+import { formatCategoryLabel } from '../categories/categoryService';
 
 function SellerDashboard() {
   const { current, logout } = useSellerAuth();
+  const categories = useCategories();
   const [tab, setTab] = useState('dashboard');
   const [form, setForm] = useState({ name: '', category: 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
   const [editingId, setEditingId] = useState(null);
@@ -150,23 +153,30 @@ function SellerDashboard() {
     return { units, revenue };
   }, [myOrderItems]);
 
+  useEffect(() => {
+    if (categories.length === 0) return;
+    setForm((prev) => ({ ...prev, category: categories.includes(prev.category) ? prev.category : categories[0] }));
+    setEditForm((prev) => ({ ...prev, category: categories.includes(prev.category) ? prev.category : categories[0] }));
+  }, [categories]);
+
   if (!current) {
     return (
       <main className="Container">
-        <h2>Seller Dashboard</h2>
+        <h2>Farmer Dashboard</h2>
         <p>Please login to manage your products.</p>
       </main>
     );
   }
 
-  if (!current.approved || current.status === 'suspended' || current.status === 'blocked') {
+  if (!current.approved || current.status === 'suspended' || current.status === 'blocked' || current.status === 'rejected') {
     return (
       <main className="Container">
-        <h2>Seller Dashboard</h2>
+        <h2>Farmer Dashboard</h2>
         <div className="Card">
           <div className="CardBody">
             <p className="Muted">Status: {current.status || (current.approved ? 'approved' : 'pending')}</p>
-            {!current.approved && <p>Your account is pending approval. You cannot add products yet.</p>}
+            {current.status === 'rejected' && <p>Your registration was rejected by admin. Please contact support or register again with the correct details.</p>}
+            {!current.approved && current.status !== 'rejected' && <p>Your account is pending approval. You cannot add products yet.</p>}
             {current.status === 'suspended' && <p>Your account is suspended. Please contact support.</p>}
             {current.status === 'blocked' && <p>Your account is blocked. Please contact support.</p>}
           </div>
@@ -188,7 +198,7 @@ function SellerDashboard() {
       sellerId: current.id,
     });
     setMyProducts([created, ...myProducts]);
-    setForm({ name: '', category: 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
+    setForm({ name: '', category: categories[0] || 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
     setMessage('Product added');
     setTimeout(() => setMessage(''), 1500);
   };
@@ -229,7 +239,7 @@ function SellerDashboard() {
     setEditingId(p.id);
     setEditForm({
       name: p.name || '',
-      category: p.category || 'fruit',
+      category: p.category || categories[0] || 'fruit',
       price: p.price || '',
       inventory: (p.inventory ?? p.quantity ?? ''),
       description: p.description || '',
@@ -290,7 +300,7 @@ function SellerDashboard() {
       <div className="SellerLayout">
         <aside className="Sidebar">
           <div className="SidebarHeader">
-            <h3 style={{ margin: 0 }}>Seller</h3>
+            <h3 style={{ margin: 0 }}>Farmer</h3>
             <p className="Muted" style={{ margin: 0 }}>{current.name}</p>
           </div>
           <nav className="Menu">
@@ -523,8 +533,9 @@ function SellerDashboard() {
                     <label>
                       Category
                       <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                        <option value="fruit">Fruit</option>
-                        <option value="vegetable">Vegetable</option>
+                        {categories.map((category) => (
+                          <option key={category} value={category}>{formatCategoryLabel(category)}</option>
+                        ))}
                       </select>
                     </label>
                     <label>
@@ -659,8 +670,9 @@ function SellerDashboard() {
                 <label>
                   Category
                   <select value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
-                    <option value="fruit">Fruit</option>
-                    <option value="vegetable">Vegetable</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>{formatCategoryLabel(category)}</option>
+                    ))}
                   </select>
                 </label>
                 <label>

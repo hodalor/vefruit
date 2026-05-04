@@ -1,6 +1,15 @@
 import seed from '../products';
 
 const PRODUCTS_KEY = 'vefruit_products_v1';
+const PRODUCT_EVENT = 'vefruit-products-changed';
+
+function normalizeCategory(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function emitProductsChange() {
+  window.dispatchEvent(new Event(PRODUCT_EVENT));
+}
 
 export function loadProducts() {
   try {
@@ -36,6 +45,7 @@ export function saveProducts(list) {
   try {
     localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
   } catch {}
+  emitProductsChange();
 }
 
 export function addProduct({ name, category, price, image, images, inventory, sellerId, description, tags }) {
@@ -51,7 +61,7 @@ export function addProduct({ name, category, price, image, images, inventory, se
     description: description || '',
     price: Number(price),
     quantity: qty,
-    category,
+    category: normalizeCategory(category),
     images: imgs,
     sellerId: sellerId || null,
     createdAt: new Date().toISOString(),
@@ -66,7 +76,7 @@ export function addProduct({ name, category, price, image, images, inventory, se
 
 export function updateProduct(id, patch) {
   const list = loadProducts();
-  const updated = list.map((p) => (p.id === id ? { ...p, ...patch } : p));
+  const updated = list.map((p) => (p.id === id ? { ...p, ...patch, category: patch.category ? normalizeCategory(patch.category) : p.category } : p));
   saveProducts(updated);
   return updated.find((p) => p.id === id);
 }
@@ -81,4 +91,8 @@ export function deleteProduct(id) {
   const updated = list.filter((p) => p.id !== id);
   saveProducts(updated);
   return true;
+}
+
+export function getProductEventName() {
+  return PRODUCT_EVENT;
 }

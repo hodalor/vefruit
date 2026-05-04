@@ -35,6 +35,25 @@ export function SellerAuthProvider({ children }) {
   }, [sellers]);
 
   useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key === SELLERS_KEY) {
+        setSellers(readSellers());
+      }
+      if (event.key === CURRENT_KEY) {
+        try {
+          const raw = localStorage.getItem(CURRENT_KEY);
+          setCurrent(raw ? JSON.parse(raw) : null);
+        } catch {
+          setCurrent(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  useEffect(() => {
     try {
       if (current) localStorage.setItem(CURRENT_KEY, JSON.stringify(current));
       else localStorage.removeItem(CURRENT_KEY);
@@ -53,9 +72,13 @@ export function SellerAuthProvider({ children }) {
   const login = ({ email, password }) => {
     const seller = sellers.find((s) => s.email.toLowerCase() === email.toLowerCase() && s.password === password);
     if (!seller) throw new Error('Invalid credentials');
-    if (!seller.approved || seller.status === 'suspended' || seller.status === 'blocked') {
-      const reason = seller.status === 'blocked' ? 'blocked' : (seller.status === 'suspended' ? 'suspended' : 'not approved');
-      throw new Error(`Seller ${reason}`);
+    if (!seller.approved || seller.status === 'suspended' || seller.status === 'blocked' || seller.status === 'rejected') {
+      const reason = seller.status === 'blocked'
+        ? 'blocked'
+        : (seller.status === 'suspended'
+          ? 'suspended'
+          : (seller.status === 'rejected' ? 'rejected' : 'not approved'));
+      throw new Error(`Farmer ${reason}`);
     }
     setCurrent(seller);
     return seller;
@@ -75,6 +98,7 @@ export function SellerAuthProvider({ children }) {
   };
 
   const approveSeller = (id) => updateSeller(id, { approved: true, status: 'approved' });
+  const rejectSeller = (id) => updateSeller(id, { approved: false, status: 'rejected' });
   const suspendSeller = (id) => updateSeller(id, { approved: false, status: 'suspended' });
   const blockSeller = (id) => updateSeller(id, { approved: false, status: 'blocked' });
   const unblockSeller = (id) => updateSeller(id, { approved: true, status: 'approved' });
@@ -83,7 +107,20 @@ export function SellerAuthProvider({ children }) {
     if (current?.id === id) setCurrent(null);
   };
 
-  const value = { sellers, current, register, login, logout, approveSeller, suspendSeller, blockSeller, unblockSeller, updateSeller, deleteSeller };
+  const value = {
+    sellers,
+    current,
+    register,
+    login,
+    logout,
+    approveSeller,
+    rejectSeller,
+    suspendSeller,
+    blockSeller,
+    unblockSeller,
+    updateSeller,
+    deleteSeller,
+  };
   return <SellerAuthContext.Provider value={value}>{children}</SellerAuthContext.Provider>;
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../cart/CartContext';
 import { useUserAuth } from '../auth/UserAuthContext';
@@ -13,10 +13,23 @@ function HeaderBar() {
   const [params] = useSearchParams();
   const [q, setQ] = useState(params.get('q') || '');
   const [open, setOpen] = useState(false);
+  const accountRef = useRef(null);
 
   useEffect(() => {
     setQ(params.get('q') || '');
   }, [params]);
+
+  useEffect(() => {
+    const onPointerDown = (event) => {
+      if (!accountRef.current) return;
+      if (!accountRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    return () => document.removeEventListener('mousedown', onPointerDown);
+  }, []);
 
   const onSearch = (e) => {
     e.preventDefault();
@@ -33,14 +46,14 @@ function HeaderBar() {
         <form className="SearchForm" onSubmit={onSearch}>
           <input
             className="SearchInput"
-            placeholder="Search by name, ID, category, seller"
+            placeholder="Search by name, ID, category, farmer"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <button className="SearchButton" type="submit">Search</button>
         </form>
         <nav className="TopActions">
-          <div className="Account" onMouseLeave={() => setOpen(false)}>
+          <div className="Account" ref={accountRef}>
             <button className="AccountBtn" type="button" data-open={open} onClick={() => setOpen((v) => !v)}>
               Account <span className="Caret">▾</span>
             </button>
@@ -56,13 +69,13 @@ function HeaderBar() {
                 )}
                 {sellerCurrent ? (
                   <>
-                    <Link className="DropdownItem" to="/seller/dashboard" onClick={() => setOpen(false)}>Seller Dashboard</Link>
-                    <button className="DropdownItem" onClick={() => { sellerLogout(); setOpen(false); }}>Logout Seller</button>
+                    <Link className="DropdownItem" to="/seller/dashboard" onClick={() => setOpen(false)}>Farmer Dashboard</Link>
+                    <button className="DropdownItem" onClick={() => { sellerLogout(); setOpen(false); }}>Logout Farmer</button>
                   </>
                 ) : (
                   <>
-                    <Link className="DropdownItem" to="/seller/login" onClick={() => setOpen(false)}>Seller Login</Link>
-                    <Link className="DropdownItem" to="/seller/register" onClick={() => setOpen(false)}>Seller Register</Link>
+                    <Link className="DropdownItem" to="/seller/login" onClick={() => setOpen(false)}>Farmer Login</Link>
+                    <Link className="DropdownItem" to="/seller/register" onClick={() => setOpen(false)}>Farmer Register</Link>
                   </>
                 )}
               </div>

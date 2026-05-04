@@ -44,7 +44,7 @@ function Register() {
               Role
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                 <option value="buyer">Buyer</option>
-                <option value="seller">Seller</option>
+                <option value="seller">Farmer</option>
               </select>
             </label>
             <div className="FormActions">
