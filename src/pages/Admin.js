@@ -113,6 +113,10 @@ function Admin() {
     return users.filter((user) => (
       matchesSearch(user.name, search) ||
       matchesSearch(user.email, search) ||
+      matchesSearch(user.phone, search) ||
+      matchesSearch(user.address, search) ||
+      matchesSearch(user.idType, search) ||
+      matchesSearch(user.idNumber, search) ||
       matchesSearch(user.role, search) ||
       String(user.id).includes(search)
     ));
@@ -542,7 +546,12 @@ function Admin() {
                   <div className="Card" key={user.id}>
                     <div className="CardBody">
                       <h3>{user.name}</h3>
-                      <p className="Muted">{user.email}</p>
+                      <p className="Muted">{user.phone || 'No phone number'}</p>
+                      {user.email && <p className="Muted">{user.email}</p>}
+                      <div className="AdminDetailList">
+                        {user.address && <div><strong>Address:</strong> {user.address}</div>}
+                        {(user.idType || user.idNumber) && <div><strong>ID:</strong> {[user.idType, user.idNumber].filter(Boolean).join(' - ')}</div>}
+                      </div>
                       <div className="AdminInlineField">
                         <label>
                           Role
@@ -1091,10 +1100,25 @@ function FarmerSection({ title, searchValue, onSearchChange, placeholder, farmer
             <div className="Card" key={farmer.id}>
               <div className="CardBody">
                 <h3>{farmer.name}</h3>
-                <p className="Muted">{farmer.email}</p>
+                <p className="Muted">{farmer.phone || 'No phone number'}</p>
+                {farmer.email && <p className="Muted">{farmer.email}</p>}
                 <div className="AdminPillRow">
                   <span className="AdminPill">{capitalize(getFarmerStatus(farmer))}</span>
                   <span className="AdminPill">{new Date(farmer.createdAt || Date.now()).toLocaleDateString()}</span>
+                </div>
+                <div className="AdminDetailList">
+                  {farmer.address && <div><strong>Address:</strong> {farmer.address}</div>}
+                  {(farmer.idType || farmer.idNumber) && <div><strong>ID:</strong> {[farmer.idType, farmer.idNumber].filter(Boolean).join(' - ')}</div>}
+                  {farmer.businessName && <div><strong>Business:</strong> {farmer.businessName}</div>}
+                  {farmer.businessAddress && <div><strong>Business Address:</strong> {farmer.businessAddress}</div>}
+                  {farmer.businessPhone && <div><strong>Business Phone:</strong> {farmer.businessPhone}</div>}
+                  {farmer.registrationNumber && <div><strong>Registration No:</strong> {farmer.registrationNumber}</div>}
+                  {(farmer.bankName || farmer.accountName || farmer.accountNumber) && (
+                    <div><strong>Bank:</strong> {[farmer.bankName, farmer.branchName, farmer.branchCode, farmer.accountName, farmer.accountNumber].filter(Boolean).join(' | ')}</div>
+                  )}
+                  {(farmer.mobileMoneyNumber || farmer.mobileMoneyMtnName) && (
+                    <div><strong>MTN MoMo:</strong> {[farmer.mobileMoneyMtnName, farmer.mobileMoneyNumber].filter(Boolean).join(' - ')}</div>
+                  )}
                 </div>
                 <div className="AdminButtonRow">
                   {actions(farmer)}
@@ -1290,6 +1314,21 @@ function filterFarmers(list, search) {
   return list.filter((farmer) => (
     matchesSearch(farmer.name, search) ||
     matchesSearch(farmer.email, search) ||
+    matchesSearch(farmer.phone, search) ||
+    matchesSearch(farmer.address, search) ||
+    matchesSearch(farmer.idType, search) ||
+    matchesSearch(farmer.idNumber, search) ||
+    matchesSearch(farmer.businessName, search) ||
+    matchesSearch(farmer.businessAddress, search) ||
+    matchesSearch(farmer.businessPhone, search) ||
+    matchesSearch(farmer.registrationNumber, search) ||
+    matchesSearch(farmer.bankName, search) ||
+    matchesSearch(farmer.branchName, search) ||
+    matchesSearch(farmer.branchCode, search) ||
+    matchesSearch(farmer.accountName, search) ||
+    matchesSearch(farmer.accountNumber, search) ||
+    matchesSearch(farmer.mobileMoneyNumber, search) ||
+    matchesSearch(farmer.mobileMoneyMtnName, search) ||
     matchesSearch(getFarmerStatus(farmer), search) ||
     String(farmer.id).includes(search)
   ));

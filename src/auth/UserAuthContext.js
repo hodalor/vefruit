@@ -17,6 +17,30 @@ async function hashPassword(pw) {
   }
 }
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\s+/g, '').trim();
+}
+
+function buildBuyerProfile(payload = {}) {
+  return {
+    phone: normalizePhone(payload.phone),
+    email: normalizeEmail(payload.email),
+    address: String(payload.address || '').trim(),
+    idType: String(payload.idType || '').trim(),
+    idNumber: String(payload.idNumber || '').trim(),
+  };
+}
+
+function matchesIdentifier(user, identifier) {
+  const value = String(identifier || '').trim().toLowerCase();
+  if (!value) return false;
+  return normalizeEmail(user.email) === value || normalizePhone(user.phone).toLowerCase() === value;
+}
+
 function readUsers() {
   try {
     const raw = localStorage.getItem(USERS_KEY);
@@ -66,14 +90,37 @@ export function UserAuthProvider({ children }) {
     } catch {}
   }, [current]);
 
-  const register = async ({ name, email, password, role }) => {
-    const exists = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (exists) throw new Error('Email already registered');
+  useEffect(() => {
+    const onStorage = (event) => {
+      if (event.key === USERS_KEY) setUsers(readUsers());
+      if (event.key === CURRENT_USER_KEY) {
+        try {
+          const raw = localStorage.getItem(CURRENT_USER_KEY);
+          setCurrent(raw ? JSON.parse(raw) : null);
+        } catch {
+          setCurrent(null);
+        }
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  const register = async ({ name, email, password, role, phone, address, idType, idNumber }) => {
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhone(phone);
+    const requiresPhone = role !== 'admin';
+    if (requiresPhone && !normalizedPhone) throw new Error('Phone number is required');
+    const emailExists = normalizedEmail && users.find((u) => normalizeEmail(u.email) === normalizedEmail);
+    if (emailExists) throw new Error('Email already registered');
+    const phoneExists = normalizedPhone && users.find((u) => normalizePhone(u.phone) === normalizedPhone);
+    if (phoneExists) throw new Error('Phone number already registered');
     const hashed = await hashPassword(password);
+    const profile = buildBuyerProfile({ phone, email, address, idType, idNumber });
     const user = {
       id: Date.now(),
       name,
-      email,
+      ...profile,
       password: hashed,
       role,
       isVerified: true,
@@ -84,9 +131,10 @@ export function UserAuthProvider({ children }) {
     return user;
   };
 
-  const login = async ({ email, password }) => {
+  const login = async ({ identifier, email, password }) => {
+    const lookup = identifier || email;
     const hashed = await hashPassword(password);
-    const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.password === hashed);
+    const user = users.find((u) => matchesIdentifier(u, lookup) && u.password === hashed);
     if (!user) throw new Error('Invalid credentials');
     setCurrent(user);
     return user;

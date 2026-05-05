@@ -4,6 +4,41 @@ const SellerAuthContext = createContext();
 const SELLERS_KEY = 'vefruit_sellers_v1';
 const CURRENT_KEY = 'vefruit_current_seller_v1';
 
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function normalizePhone(phone) {
+  return String(phone || '').replace(/\s+/g, '').trim();
+}
+
+function buildFarmerProfile(payload = {}) {
+  return {
+    phone: normalizePhone(payload.phone),
+    email: normalizeEmail(payload.email),
+    address: String(payload.address || '').trim(),
+    idType: String(payload.idType || '').trim(),
+    idNumber: String(payload.idNumber || '').trim(),
+    businessName: String(payload.businessName || '').trim(),
+    businessAddress: String(payload.businessAddress || '').trim(),
+    businessPhone: normalizePhone(payload.businessPhone),
+    registrationNumber: String(payload.registrationNumber || '').trim(),
+    bankName: String(payload.bankName || '').trim(),
+    branchName: String(payload.branchName || '').trim(),
+    branchCode: String(payload.branchCode || '').trim(),
+    accountName: String(payload.accountName || '').trim(),
+    accountNumber: String(payload.accountNumber || '').trim(),
+    mobileMoneyNumber: normalizePhone(payload.mobileMoneyNumber),
+    mobileMoneyMtnName: String(payload.mobileMoneyMtnName || '').trim(),
+  };
+}
+
+function matchesIdentifier(user, identifier) {
+  const value = String(identifier || '').trim().toLowerCase();
+  if (!value) return false;
+  return normalizeEmail(user.email) === value || normalizePhone(user.phone).toLowerCase() === value;
+}
+
 function readSellers() {
   try {
     const raw = localStorage.getItem(SELLERS_KEY);
@@ -60,17 +95,49 @@ export function SellerAuthProvider({ children }) {
     } catch {}
   }, [current]);
 
-  const register = ({ name, email, password }) => {
-    const exists = sellers.find((s) => s.email.toLowerCase() === email.toLowerCase());
-    if (exists) throw new Error('Email already registered');
-    const seller = { id: Date.now(), name, email, password, approved: false, status: 'pending', createdAt: new Date().toISOString() };
+  const register = ({ name, email, password, phone, address, idType, idNumber, businessName, businessAddress, businessPhone, registrationNumber, bankName, branchName, branchCode, accountName, accountNumber, mobileMoneyNumber, mobileMoneyMtnName }) => {
+    const normalizedEmail = normalizeEmail(email);
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) throw new Error('Phone number is required');
+    const emailExists = normalizedEmail && sellers.find((s) => normalizeEmail(s.email) === normalizedEmail);
+    if (emailExists) throw new Error('Email already registered');
+    const phoneExists = sellers.find((s) => normalizePhone(s.phone) === normalizedPhone);
+    if (phoneExists) throw new Error('Phone number already registered');
+    const profile = buildFarmerProfile({
+      phone,
+      email,
+      address,
+      idType,
+      idNumber,
+      businessName,
+      businessAddress,
+      businessPhone,
+      registrationNumber,
+      bankName,
+      branchName,
+      branchCode,
+      accountName,
+      accountNumber,
+      mobileMoneyNumber,
+      mobileMoneyMtnName,
+    });
+    const seller = {
+      id: Date.now(),
+      name,
+      ...profile,
+      password,
+      approved: false,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
     setSellers((prev) => [seller, ...prev]);
     setCurrent(seller);
     return seller;
   };
 
-  const login = ({ email, password }) => {
-    const seller = sellers.find((s) => s.email.toLowerCase() === email.toLowerCase() && s.password === password);
+  const login = ({ identifier, email, password }) => {
+    const lookup = identifier || email;
+    const seller = sellers.find((s) => matchesIdentifier(s, lookup) && s.password === password);
     if (!seller) throw new Error('Invalid credentials');
     if (!seller.approved || seller.status === 'suspended' || seller.status === 'blocked' || seller.status === 'rejected') {
       const reason = seller.status === 'blocked'

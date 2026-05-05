@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 function SellerLogin() {
   const { login } = useSellerAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
 
   const submit = (e) => {
@@ -26,8 +26,8 @@ function SellerLogin() {
           {error && <p style={{ color: 'crimson' }}>{error}</p>}
           <form onSubmit={submit} className="Form">
             <label>
-              Email
-              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              Phone Number Or Email
+              <input value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} required />
             </label>
             <label>
               Password
