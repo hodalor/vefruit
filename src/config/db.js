@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { seedDefaults } = require('../utils/seed');
 
 let isConnected = false;
 
@@ -16,6 +17,7 @@ async function connectToDatabase() {
   await mongoose.connect(mongoUri);
   isConnected = true;
 
+  await seedDefaults();
   console.log('MongoDB connected');
   return mongoose.connection;
 }
