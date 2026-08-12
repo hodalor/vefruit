@@ -6,7 +6,7 @@ import { useUserAuth } from '../auth/UserAuthContext';
 import { addProduct, deleteProduct } from '../products/productService';
 import useProducts from '../products/useProducts';
 import { getOrderEventName, loadOrders } from '../orders/orderService';
-import { addCategory, deleteCategory, formatCategoryLabel } from '../categories/categoryService';
+import { addCategory, deleteCategory, formatCategoryLabel, getCategoryValue, updateCategory } from '../categories/categoryService';
 import useCategories from '../categories/useCategories';
 import { PRODUCT_FALLBACK_IMAGE, SLIDE_FALLBACK_IMAGE, resolveImageSource, resolveProductImage } from '../utils/images';
 
@@ -26,10 +26,15 @@ function Admin() {
   const [notice, setNotice] = useState('');
   const [orders, setOrders] = useState([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [farmersMenuOpen, setFarmersMenuOpen] = useState(true);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('categories');
   const [categoryName, setCategoryName] = useState('');
+  const [parentCategoryId, setParentCategoryId] = useState('');
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editingCategoryName, setEditingCategoryName] = useState('');
+  const [editingCategoryParentId, setEditingCategoryParentId] = useState('');
   const [productForm, setProductForm] = useState({
     name: '',
     category: '',
@@ -72,7 +77,8 @@ function Admin() {
 
   useEffect(() => {
     if (!categories.length) return;
-    setProductForm((prev) => ({ ...prev, category: prev.category || categories[0] }));
+    const names = categories.map((category) => getCategoryValue(category));
+    setProductForm((prev) => ({ ...prev, category: names.includes(prev.category) ? prev.category : getCategoryValue(categories[0]) }));
   }, [categories]);
 
   const rangeOrders = useMemo(
@@ -121,6 +127,7 @@ function Admin() {
     if (!search) return users;
     return users.filter((user) => (
       matchesSearch(user.name, search) ||
+      matchesSearch(user.username, search) ||
       matchesSearch(user.email, search) ||
       matchesSearch(user.phone, search) ||
       matchesSearch(user.address, search) ||
@@ -165,6 +172,22 @@ function Admin() {
     () => filterFarmers(rejectedFarmers, search),
     [rejectedFarmers, search]
   );
+
+  const adminUsers = useMemo(
+    () => filteredUsers.filter((user) => user.role === 'admin'),
+    [filteredUsers]
+  );
+
+  const buyerUsers = useMemo(
+    () => filteredUsers.filter((user) => user.role === 'buyer'),
+    [filteredUsers]
+  );
+
+  const marketplaceUsers = useMemo(() => {
+    const buyerEntries = buyerUsers.map((user) => ({ ...user, accountType: 'buyer' }));
+    const farmerEntries = filterFarmers(farmers, search).map((farmer) => ({ ...farmer, accountType: 'farmer' }));
+    return [...buyerEntries, ...farmerEntries].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }, [buyerUsers, farmers, search]);
 
   const addUrl = async () => {
     if (!imageUrl.trim()) return;
@@ -264,7 +287,7 @@ function Admin() {
     });
     setProductForm({
       name: '',
-      category: categories[0] || '',
+      category: getCategoryValue(categories[0]) || '',
       price: '',
       inventory: '',
       description: '',
@@ -279,8 +302,9 @@ function Admin() {
   const submitCategory = async (e) => {
     e.preventDefault();
     try {
-      await addCategory(categoryName);
+      await addCategory({ name: categoryName, parentId: parentCategoryId });
       setCategoryName('');
+      setParentCategoryId('');
       flash('Category created');
     } catch (err) {
       flash(err.message || 'Failed to create category');
@@ -288,13 +312,24 @@ function Admin() {
   };
 
   const categoryCounts = useMemo(() => {
+    const byName = new Map(categories.map((category) => [getCategoryValue(category), category]));
+    const byId = new Map(categories.map((category) => [String(category.id), category]));
     const counts = new Map();
     products.forEach((product) => {
-      const key = String(product.category || '').toLowerCase();
-      counts.set(key, (counts.get(key) || 0) + 1);
+      let current = byName.get(String(product.category || '').toLowerCase());
+      while (current) {
+        const key = getCategoryValue(current);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        current = current.parentId ? byId.get(String(current.parentId)) : null;
+      }
     });
     return counts;
-  }, [products]);
+  }, [categories, products]);
+
+  const parentCategoryOptions = useMemo(
+    () => categories.filter((category) => category.level === 0),
+    [categories]
+  );
 
   if (!current || current.role !== 'admin') {
     return (
@@ -322,7 +357,6 @@ function Admin() {
         </SidebarGroup>
 
         <SidebarGroup title="Management">
-          <SidebarButton label="Hero" active={tab === 'hero'} onClick={() => goToTab('hero')} />
           <SidebarButton label="Users" active={tab === 'users'} onClick={() => goToTab('users')} />
           <SidebarButton label="Orders" active={tab === 'orders'} onClick={() => goToTab('orders')} />
           <SidebarButton label="Products" active={tab === 'products'} onClick={() => goToTab('products')} />
@@ -348,7 +382,7 @@ function Admin() {
         >
           <SidebarButton compact label="Categories" active={tab === 'settings-categories'} onClick={() => { setSettingsTab('categories'); goToTab('settings-categories'); }} count={categories.length} />
           <SidebarButton compact label="General" active={tab === 'settings-general'} onClick={() => { setSettingsTab('general'); goToTab('settings-general'); }} />
-          <SidebarButton compact label="Storefront" active={tab === 'settings-storefront'} onClick={() => { setSettingsTab('storefront'); goToTab('settings-storefront'); }} />
+          <SidebarButton compact label="Storefront" active={tab === 'settings-storefront'} onClick={() => { setSettingsTab('storefront'); goToTab('settings-storefront'); }} count={slides.length} />
         </SidebarDropdown>
       </aside>
 
@@ -364,13 +398,12 @@ function Admin() {
               {tab === 'farmers-list' && 'See every approved farmer currently active on the platform.'}
               {tab === 'farmers-rejected' && 'Review rejected, suspended, or blocked farmers.'}
               {tab === 'products' && 'Manage catalog items and post products on behalf of approved farmers.'}
-              {tab === 'users' && 'Manage buyers and admins.'}
+              {tab === 'users' && 'Manage marketplace users and keep admin accounts separate.'}
               {tab === 'orders' && 'Review all orders placed in the marketplace.'}
-              {tab === 'hero' && 'Update homepage banners and slide order.'}
               {tab === 'search' && 'Search across users, farmers, products, and orders.'}
-              {tab === 'settings-categories' && 'Manage live categories used across the storefront and product forms.'}
+              {tab === 'settings-categories' && 'Manage live categories with parent and child structure for the storefront and product forms.'}
               {tab === 'settings-general' && 'General settings panel.'}
-              {tab === 'settings-storefront' && 'Storefront settings panel.'}
+              {tab === 'settings-storefront' && 'Manage hero banners and storefront presentation settings.'}
             </p>
           </div>
         </div>
@@ -466,109 +499,111 @@ function Admin() {
           </div>
         )}
 
-        {tab === 'hero' && (
-          <div className="AdminStack">
-            <section className="Card">
-              <div className="CardBody">
-                <div className="AdminSectionHeader">
-                  <div>
-                    <h2 className="SectionTitle">Hero Slides</h2>
-                    <p className="AdminSubtle">Upload or add banner images for the homepage slider.</p>
-                  </div>
-                </div>
-                <div className="AdminFormGrid">
-                  <label>
-                    Title
-                    <input value={title} onChange={(e) => setTitle(e.target.value)} />
-                  </label>
-                  <label>
-                    Image URL
-                    <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
-                  </label>
-                  <div className="AdminButtonRow AdminFormActions">
-                    <button className="Btn" type="button" onClick={addUrl}>Add From URL</button>
-                    <label className="BtnOutline AdminUploadButton">
-                      Upload Images
-                      <input type="file" accept="image/*" multiple onChange={(e) => uploadImages(e.target.files)} />
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {slides.length === 0 ? (
-              <p className="Muted">No slides yet.</p>
-            ) : (
-              <div className="Grid">
-                {slides.map((slide) => (
-                  <div className="Card" key={slide.id}>
-                    <img src={resolveImageSource(slide.image, SLIDE_FALLBACK_IMAGE, 'landscape_16_9')} alt={slide.title} onError={(e) => { e.currentTarget.src = SLIDE_FALLBACK_IMAGE; }} />
-                    <div className="CardBody">
-                      <h3>{slide.title}</h3>
-                      <div className="AdminButtonRow">
-                        <button className="BtnOutline" type="button" onClick={() => moveUp(slide.id)}>Up</button>
-                        <button className="BtnOutline" type="button" onClick={() => moveDown(slide.id)}>Down</button>
-                        <button className="BtnOutline" type="button" onClick={() => startEdit(slide)}>Edit</button>
-                        <button className="BtnDanger" type="button" onClick={() => removeSlide(slide.id)}>Delete</button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
         {tab === 'users' && (
           <div className="AdminStack">
             <section className="Card">
               <div className="CardBody">
                 <div className="AdminSectionHeader">
                   <div>
-                    <h2 className="SectionTitle">Manage Users</h2>
-                    <p className="AdminSubtle">Create admins and update user roles.</p>
+                    <h2 className="SectionTitle">Admin Accounts</h2>
+                    <p className="AdminSubtle">Create admin-only accounts with full name, username, phone number, and password.</p>
                   </div>
+                  <button className="Btn" type="button" onClick={() => setShowCreateUserModal(true)}>Create User</button>
                 </div>
-                <AdminCreateForm onCreate={async (payload) => { await register({ ...payload, role: 'admin' }); flash('Admin created'); }} />
               </div>
             </section>
 
             <section className="Card">
               <div className="CardBody">
-                <input className="SearchInput" placeholder="Search users" value={q} onChange={(e) => setQ(e.target.value)} />
+                <input className="SearchInput" placeholder="Search buyers, farmers, and admins" value={q} onChange={(e) => setQ(e.target.value)} />
               </div>
             </section>
 
-            {filteredUsers.length === 0 ? (
-              <p className="Muted">No users found.</p>
-            ) : (
-              <div className="Grid">
-                {filteredUsers.map((user) => (
-                  <div className="Card" key={user.id}>
-                    <div className="CardBody">
-                      <h3>{user.name}</h3>
-                      <p className="Muted">{user.phone || 'No phone number'}</p>
-                      {user.email && <p className="Muted">{user.email}</p>}
-                      <div className="AdminDetailList">
-                        {user.address && <div><strong>Address:</strong> {user.address}</div>}
-                        {(user.idType || user.idNumber) && <div><strong>ID:</strong> {[user.idType, user.idNumber].filter(Boolean).join(' - ')}</div>}
-                      </div>
-                      <div className="AdminInlineField">
-                        <label>
-                          Role
-                          <select value={user.role || 'buyer'} onChange={(e) => updateUser(user.id, { role: e.target.value })}>
-                            <option value="buyer">Buyer</option>
-                            <option value="farmer">Farmer</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </label>
-                        <button className="BtnDanger" type="button" onClick={() => deleteUser(user.id)}>Remove</button>
-                      </div>
-                    </div>
+            <div className="AdminSearchGrid">
+              <SearchSummaryCard label="Buyers" value={buyerUsers.length} />
+              <SearchSummaryCard label="Farmers" value={filterFarmers(farmers, search).length} />
+              <SearchSummaryCard label="Admins" value={adminUsers.length} />
+              <SearchSummaryCard label="All Users" value={marketplaceUsers.length + adminUsers.length} />
+            </div>
+
+            <section className="Card">
+              <div className="CardBody">
+                <div className="AdminSectionHeader">
+                  <div>
+                    <h2 className="SectionTitle">Marketplace Users</h2>
+                    <p className="AdminSubtle">Buyers and farmers are kept separate from admin accounts.</p>
                   </div>
-                ))}
+                </div>
+                {marketplaceUsers.length === 0 ? (
+                  <p className="Muted">No marketplace users found.</p>
+                ) : (
+                  <div className="Grid">
+                    {marketplaceUsers.map((user) => (
+                      <div className="Card" key={`${user.accountType}-${user.id}`}>
+                        <div className="CardBody">
+                          <h3>{user.name}</h3>
+                          <div className="AdminPillRow">
+                            <span className="AdminPill">{capitalize(user.accountType)}</span>
+                            {user.accountType === 'farmer' && <span className="AdminPill">{capitalize(getFarmerStatus(user))}</span>}
+                          </div>
+                          {user.username && <p className="Muted">@{user.username}</p>}
+                          <p className="Muted">{user.phone || 'No phone number'}</p>
+                          {user.email && <p className="Muted">{user.email}</p>}
+                          <div className="AdminDetailList">
+                            {user.address && <div><strong>Address:</strong> {user.address}</div>}
+                            {(user.idType || user.idNumber) && <div><strong>ID:</strong> {[user.idType, user.idNumber].filter(Boolean).join(' - ')}</div>}
+                            {user.accountType === 'farmer' && user.businessName && <div><strong>Business:</strong> {user.businessName}</div>}
+                          </div>
+                          <div className="AdminButtonRow">
+                            {user.accountType === 'buyer' ? (
+                              <button className="BtnDanger" type="button" onClick={() => deleteUser(user.id)}>Remove Buyer</button>
+                            ) : (
+                              <button className="BtnOutline" type="button" onClick={() => goToTab(getFarmerStatus(user) === 'approved' ? 'farmers-list' : getFarmerStatus(user) === 'pending' ? 'farmers-review' : 'farmers-rejected')}>Open Farmer Record</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </section>
+
+            <section className="Card">
+              <div className="CardBody">
+                <div className="AdminSectionHeader">
+                  <div>
+                    <h2 className="SectionTitle">Admin Users</h2>
+                    <p className="AdminSubtle">These accounts can access the admin dashboard.</p>
+                  </div>
+                </div>
+                {adminUsers.length === 0 ? (
+                  <p className="Muted">No admin users found.</p>
+                ) : (
+                  <div className="Grid">
+                    {adminUsers.map((user) => (
+                      <div className="Card" key={user.id}>
+                        <div className="CardBody">
+                          <h3>{user.name}</h3>
+                          {user.username && <p className="Muted">@{user.username}</p>}
+                          <p className="Muted">{user.phone || 'No phone number'}</p>
+                          {user.email && <p className="Muted">{user.email}</p>}
+                          <div className="AdminInlineField">
+                            <label>
+                              Role
+                              <select value={user.role || 'admin'} onChange={(e) => updateUser(user.id, { role: e.target.value })}>
+                                <option value="admin">Admin</option>
+                              </select>
+                            </label>
+                            <button className="BtnDanger" type="button" onClick={() => deleteUser(user.id)}>Remove</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         )}
 
@@ -734,13 +769,22 @@ function Admin() {
                     <div className="AdminSectionHeader">
                       <div>
                         <h2 className="SectionTitle">Categories</h2>
-                        <p className="AdminSubtle">Create categories once and reuse them across the frontend and product forms.</p>
+                        <p className="AdminSubtle">Create parent and child categories once and reuse them across the storefront and product forms.</p>
                       </div>
                     </div>
                     <form onSubmit={submitCategory} className="AdminFormGrid">
                       <label>
                         Category Name
                         <input value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="e.g. root crops" required />
+                      </label>
+                      <label>
+                        Parent Category
+                        <select value={parentCategoryId} onChange={(e) => setParentCategoryId(e.target.value)}>
+                          <option value="">No parent category</option>
+                          {parentCategoryOptions.map((category) => (
+                            <option key={category.id} value={category.id}>{formatCategoryLabel(category)}</option>
+                          ))}
+                        </select>
                       </label>
                       <div className="AdminFieldWide AdminButtonRow">
                         <button className="Btn" type="submit">Create Category</button>
@@ -753,19 +797,35 @@ function Admin() {
                   <div className="CardBody">
                     <div className="AdminCategoryList">
                       {categories.map((category) => (
-                        <div key={category} className="AdminCategoryRow">
+                        <div key={category.id} className="AdminCategoryRow">
                           <div>
                             <strong>{formatCategoryLabel(category)}</strong>
-                            <div className="Muted">{categoryCounts.get(category) || 0} product(s)</div>
+                            <div className="Muted">
+                              {category.parentName ? `Parent: ${formatCategoryLabel(category.parentName)} • ` : 'Top level • '}
+                              {categoryCounts.get(getCategoryValue(category)) || 0} product(s)
+                            </div>
                           </div>
-                          <button
-                            className="BtnDanger"
-                            type="button"
-                            disabled={(categoryCounts.get(category) || 0) > 0}
-                            onClick={async () => { await deleteCategory(category); flash(`${formatCategoryLabel(category)} removed`); }}
-                          >
-                            Delete
-                          </button>
+                          <div className="AdminButtonRow">
+                            <button
+                              className="BtnOutline"
+                              type="button"
+                              onClick={() => {
+                                setEditingCategoryId(category.id);
+                                setEditingCategoryName(category.name);
+                                setEditingCategoryParentId(category.parentId || '');
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              className="BtnDanger"
+                              type="button"
+                              disabled={(categoryCounts.get(getCategoryValue(category)) || 0) > 0}
+                              onClick={async () => { await deleteCategory(category); flash(`${formatCategoryLabel(category)} removed`); }}
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -784,12 +844,61 @@ function Admin() {
             )}
 
             {settingsTab === 'storefront' && (
-              <section className="Card">
-                <div className="CardBody">
-                  <h2 className="SectionTitle">Storefront Settings</h2>
-                  <p className="Muted">More storefront settings tabs can be added here.</p>
-                </div>
-              </section>
+              <>
+                <section className="Card">
+                  <div className="CardBody">
+                    <div className="AdminSectionHeader">
+                      <div>
+                        <h2 className="SectionTitle">Hero Slides</h2>
+                        <p className="AdminSubtle">Manage homepage banners directly from storefront settings.</p>
+                      </div>
+                    </div>
+                    <div className="AdminFormGrid">
+                      <label>
+                        Title
+                        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Fresh arrivals this week" />
+                      </label>
+                      <label>
+                        Image URL
+                        <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+                      </label>
+                      <div className="AdminButtonRow AdminFormActions">
+                        <button className="Btn" type="button" onClick={addUrl}>Add From URL</button>
+                        <label className="BtnOutline AdminUploadButton">
+                          Upload Images
+                          <input type="file" accept="image/*" multiple onChange={(e) => uploadImages(e.target.files)} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="Card">
+                  <div className="CardBody">
+                    <h2 className="SectionTitle">Live Hero Banners</h2>
+                    {slides.length === 0 ? (
+                      <p className="Muted">No hero slides yet.</p>
+                    ) : (
+                      <div className="Grid">
+                        {slides.map((slide) => (
+                          <div className="Card" key={slide.id}>
+                            <img src={resolveImageSource(slide.image, SLIDE_FALLBACK_IMAGE, 'landscape_16_9')} alt={slide.title} onError={(e) => { e.currentTarget.src = SLIDE_FALLBACK_IMAGE; }} />
+                            <div className="CardBody">
+                              <h3>{slide.title}</h3>
+                              <div className="AdminButtonRow">
+                                <button className="BtnOutline" type="button" onClick={() => moveUp(slide.id)}>Up</button>
+                                <button className="BtnOutline" type="button" onClick={() => moveDown(slide.id)}>Down</button>
+                                <button className="BtnOutline" type="button" onClick={() => startEdit(slide)}>Edit</button>
+                                <button className="BtnDanger" type="button" onClick={() => removeSlide(slide.id)}>Delete</button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              </>
             )}
           </div>
         )}
@@ -843,7 +952,7 @@ function Admin() {
                   Category
                   <select value={productForm.category} onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}>
                     {categories.map((category) => (
-                      <option key={category} value={category}>{formatCategoryLabel(category)}</option>
+                      <option key={category.id} value={getCategoryValue(category)}>{formatCategoryLabel(category)}</option>
                     ))}
                   </select>
                 </label>
@@ -879,6 +988,74 @@ function Admin() {
                 <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
                   <button className="BtnOutline" type="button" onClick={() => setShowAddProduct(false)}>Cancel</button>
                   <button className="Btn" type="submit">Save Product</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateUserModal && (
+        <div className="EditOverlay">
+          <div className="EditModal Card AdminModalMedium">
+            <div className="CardBody">
+              <div className="AdminSectionHeader">
+                <div>
+                  <h3 style={{ marginTop: 0, marginBottom: '0.2rem' }}>Create User</h3>
+                  <p className="AdminSubtle">Create a new admin account without crowding the main Users page.</p>
+                </div>
+                <button className="BtnOutline" type="button" onClick={() => setShowCreateUserModal(false)}>Close</button>
+              </div>
+              <AdminCreateForm onCreate={async (payload) => {
+                await register({ ...payload, role: 'admin' });
+                flash('Admin created');
+                setShowCreateUserModal(false);
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingCategoryId && (
+        <div className="EditOverlay">
+          <div className="EditModal Card AdminModalMedium">
+            <div className="CardBody">
+              <div className="AdminSectionHeader">
+                <div>
+                  <h3 style={{ marginTop: 0, marginBottom: '0.2rem' }}>Edit Category</h3>
+                  <p className="AdminSubtle">Update the category name or move it under a different parent.</p>
+                </div>
+                <button className="BtnOutline" type="button" onClick={() => setEditingCategoryId(null)}>Close</button>
+              </div>
+              <form
+                className="AdminFormGrid"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  await updateCategory(editingCategoryId, { name: editingCategoryName, parentId: editingCategoryParentId });
+                  flash('Category updated');
+                  setEditingCategoryId(null);
+                  setEditingCategoryName('');
+                  setEditingCategoryParentId('');
+                }}
+              >
+                <label>
+                  Category Name
+                  <input value={editingCategoryName} onChange={(e) => setEditingCategoryName(e.target.value)} required />
+                </label>
+                <label>
+                  Parent Category
+                  <select value={editingCategoryParentId} onChange={(e) => setEditingCategoryParentId(e.target.value)}>
+                    <option value="">No parent category</option>
+                    {parentCategoryOptions
+                      .filter((category) => category.id !== editingCategoryId)
+                      .map((category) => (
+                        <option key={category.id} value={category.id}>{formatCategoryLabel(category)}</option>
+                      ))}
+                  </select>
+                </label>
+                <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
+                  <button className="BtnOutline" type="button" onClick={() => setEditingCategoryId(null)}>Cancel</button>
+                  <button className="Btn" type="submit">Save Category</button>
                 </div>
               </form>
             </div>
@@ -1147,7 +1324,7 @@ function SearchSummaryCard({ label, value }) {
 }
 
 function AdminCreateForm({ onCreate }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '' });
+  const [form, setForm] = useState({ name: '', username: '', phone: '', password: '', role: 'admin' });
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
 
@@ -1158,7 +1335,7 @@ function AdminCreateForm({ onCreate }) {
     try {
       await onCreate(form);
       setOk('Admin created');
-      setForm({ name: '', email: '', password: '' });
+      setForm({ name: '', username: '', phone: '', password: '', role: 'admin' });
       setTimeout(() => setOk(''), 1500);
     } catch (err) {
       setError(err.message || 'Failed');
@@ -1168,16 +1345,26 @@ function AdminCreateForm({ onCreate }) {
   return (
     <form onSubmit={submit} className="AdminFormGrid">
       <label>
-        Name
+        Full Name
         <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
       </label>
       <label>
-        Email
-        <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+        Username
+        <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+      </label>
+      <label>
+        Phone Number
+        <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
       </label>
       <label>
         Password
         <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+      </label>
+      <label>
+        Role
+        <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+          <option value="admin">Admin</option>
+        </select>
       </label>
       <div className="AdminFieldWide AdminButtonRow">
         <button className="Btn" type="submit">Create Admin</button>

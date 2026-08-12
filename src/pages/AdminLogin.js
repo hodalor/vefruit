@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 function AdminLogin() {
   const { login } = useUserAuth();
   const navigate = useNavigate();
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
 
   const submit = async (e) => {
@@ -30,8 +30,8 @@ function AdminLogin() {
           {error && <p style={{ color: 'crimson' }}>{error}</p>}
           <form onSubmit={submit} className="Form">
             <label>
-              Email
-              <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+              Username, Phone, Or Email
+              <input value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} required />
             </label>
             <label>
               Password
@@ -42,7 +42,7 @@ function AdminLogin() {
             </div>
           </form>
           <div className="Muted" style={{ marginTop: '0.75rem' }}>
-            Test admin: admin@vefruit.local / admin123
+            Test admin: admin@vefruit.local or your admin username / admin123
           </div>
         </div>
       </div>

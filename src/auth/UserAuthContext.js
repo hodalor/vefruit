@@ -3,6 +3,7 @@ import { api } from '../api/client';
 
 const UserAuthContext = createContext();
 const CURRENT_USER_KEY = 'vefruit_current_user_v1';
+const USER_EVENT = 'vefruit-users-changed';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -14,6 +15,7 @@ function normalizePhone(phone) {
 
 function buildBuyerProfile(payload = {}) {
   return {
+    username: String(payload.username || '').trim().toLowerCase(),
     phone: normalizePhone(payload.phone),
     email: normalizeEmail(payload.email),
     address: String(payload.address || '').trim(),
@@ -34,9 +36,14 @@ export function UserAuthProvider({ children }) {
   });
 
   useEffect(() => {
-    api.get('/users')
-      .then((data) => setUsers(data.users || []))
-      .catch(() => setUsers([]));
+    const sync = () => {
+      api.get('/users')
+        .then((data) => setUsers(data.users || []))
+        .catch(() => setUsers([]));
+    };
+    sync();
+    window.addEventListener(USER_EVENT, sync);
+    return () => window.removeEventListener(USER_EVENT, sync);
   }, []);
   useEffect(() => {
     try {
@@ -60,10 +67,10 @@ export function UserAuthProvider({ children }) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const register = async ({ name, email, password, role, phone, address, idType, idNumber }) => {
+  const register = async ({ name, username, email, password, role, phone, address, idType, idNumber }) => {
     const payload = {
       name,
-      ...buildBuyerProfile({ phone, email, address, idType, idNumber }),
+      ...buildBuyerProfile({ username, phone, email, address, idType, idNumber }),
       password,
       role,
     };
@@ -72,7 +79,9 @@ export function UserAuthProvider({ children }) {
       : await api.post('/auth/register-buyer', payload);
     const user = data.user;
     setUsers((prev) => [user, ...prev.filter((entry) => entry.id !== user.id)]);
-    setCurrent(user);
+    if (role !== 'admin') {
+      setCurrent(user);
+    }
     return user;
   };
 

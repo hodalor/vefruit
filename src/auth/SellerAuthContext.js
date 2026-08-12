@@ -3,6 +3,7 @@ import { api } from '../api/client';
 
 const SellerAuthContext = createContext();
 const CURRENT_KEY = 'vefruit_current_seller_v1';
+const FARMER_EVENT = 'vefruit-farmers-changed';
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -45,9 +46,14 @@ export function SellerAuthProvider({ children }) {
   });
 
   useEffect(() => {
-    api.get('/farmers')
-      .then((data) => setSellers(data.farmers || []))
-      .catch(() => setSellers([]));
+    const sync = () => {
+      api.get('/farmers')
+        .then((data) => setSellers(data.farmers || []))
+        .catch(() => setSellers([]));
+    };
+    sync();
+    window.addEventListener(FARMER_EVENT, sync);
+    return () => window.removeEventListener(FARMER_EVENT, sync);
   }, []);
 
   useEffect(() => {

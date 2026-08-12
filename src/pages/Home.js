@@ -4,23 +4,33 @@ import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import useHeroSlides from '../hero/useHeroSlides';
 import useCategories from '../categories/useCategories';
-import { formatCategoryLabel } from '../categories/categoryService';
+import { formatCategoryLabel, getCategoryValue } from '../categories/categoryService';
+import { useUserAuth } from '../auth/UserAuthContext';
+import { loadRecommendations } from '../products/productService';
 import { HERO_FALLBACK_IMAGE, PRODUCT_FALLBACK_IMAGE, resolveImageSource, resolveProductImage } from '../utils/images';
 
 function Home() {
   const products = useProducts();
   const categories = useCategories();
   const { sellers } = useSellerAuth();
+  const { current } = useUserAuth();
   const [params] = useSearchParams();
   const q = (params.get('q') || '').toLowerCase();
   const slides = useHeroSlides();
   const [idx, setIdx] = useState(0);
+  const [recommended, setRecommended] = useState([]);
   const n = slides.length;
   useEffect(() => {
     if (n < 2) return;
     const id = setInterval(() => setIdx((i) => (i + 1) % n), 4000);
     return () => clearInterval(id);
   }, [n]);
+
+  useEffect(() => {
+    loadRecommendations({ userId: current?.id, q })
+      .then(setRecommended)
+      .catch(() => setRecommended([]));
+  }, [current?.id, q]);
   const filtered = q
     ? products.filter((p) => {
         const sellerName = p.sellerId ? (sellers.find((s) => s.id === p.sellerId)?.name || '') : '';
@@ -34,13 +44,19 @@ function Home() {
       })
     : products;
   const categoryCounts = useMemo(() => {
+    const byName = new Map(categories.map((category) => [getCategoryValue(category), category]));
+    const byId = new Map(categories.map((category) => [String(category.id), category]));
     const counts = new Map();
     products.forEach((product) => {
-      const key = String(product.category || '').toLowerCase();
-      counts.set(key, (counts.get(key) || 0) + 1);
+      let current = byName.get(String(product.category || '').toLowerCase());
+      while (current) {
+        const key = getCategoryValue(current);
+        counts.set(key, (counts.get(key) || 0) + 1);
+        current = current.parentId ? byId.get(String(current.parentId)) : null;
+      }
     });
     return counts;
-  }, [products]);
+  }, [categories, products]);
   return (
     <main className="Container">
       <section className="HeroLayout">
@@ -48,10 +64,10 @@ function Home() {
           <h4>Categories</h4>
           <ul>
             {categories.map((category) => (
-              <li key={category}>
-                <Link to={`/?q=${encodeURIComponent(category)}`} className="CategoryLink">
+              <li key={category.id}>
+                <Link to={`/?q=${encodeURIComponent(getCategoryValue(category))}`} className="CategoryLink" style={{ paddingLeft: `${category.level * 14}px` }}>
                   <span>{formatCategoryLabel(category)}</span>
-                  <strong>{categoryCounts.get(category) || 0}</strong>
+                  <strong>{categoryCounts.get(getCategoryValue(category)) || 0}</strong>
                 </Link>
               </li>
             ))}
@@ -114,6 +130,30 @@ function Home() {
           ))}
           {filtered.length === 0 && (
             <p className="Muted">No products match your search.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="Landing">
+        <h2>Recommended For You</h2>
+        <div className="Grid">
+          {recommended.slice(0, 6).map((p) => (
+            <Link className="Card" key={`recommended-${p.id}`} to={`/product/${p.id}`}>
+              <img
+                src={resolveProductImage(p)}
+                alt={p.name}
+                referrerPolicy="no-referrer"
+                onError={(e) => { e.currentTarget.src = PRODUCT_FALLBACK_IMAGE; }}
+              />
+              <div className="CardBody">
+                <h3>{p.name}</h3>
+                <p className="Muted">{p.category}</p>
+                <p className="Price">GHS {p.price.toFixed(2)}</p>
+              </div>
+            </Link>
+          ))}
+          {recommended.length === 0 && (
+            <p className="Muted">Recommendations will appear here as products and orders grow.</p>
           )}
         </div>
       </section>

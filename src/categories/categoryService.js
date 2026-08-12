@@ -15,22 +15,40 @@ export async function loadCategories() {
   return data.categories || [];
 }
 
-export async function addCategory(name) {
+export async function addCategory({ name, parentId = '' }) {
   const next = normalizeCategory(name);
   if (!next) throw new Error('Category name is required');
-  const data = await api.post('/categories', { name: next });
+  const data = await api.post('/categories', { name: next, parentId: parentId || null });
   emitCategoriesChange();
   return data.category;
 }
 
-export async function deleteCategory(name) {
+export async function updateCategory(id, { name, parentId = '' }) {
   const next = normalizeCategory(name);
-  await api.delete(`/categories/${encodeURIComponent(next)}`);
+  if (!next) throw new Error('Category name is required');
+  const data = await api.patch(`/categories/${encodeURIComponent(id)}`, { name: next, parentId: parentId || null });
+  emitCategoriesChange();
+  return data.category;
+}
+
+export async function deleteCategory(category) {
+  const id = getCategoryId(category);
+  if (!id) throw new Error('Category id is required');
+  await api.delete(`/categories/${encodeURIComponent(id)}`);
   emitCategoriesChange();
 }
 
-export function formatCategoryLabel(name) {
-  return String(name || '')
+export function getCategoryId(category) {
+  return String(category?.id || category || '').trim();
+}
+
+export function getCategoryValue(category) {
+  return String(category?.name || category || '').trim().toLowerCase();
+}
+
+export function formatCategoryLabel(category) {
+  const source = String(category?.label || category?.name || category || '').trim();
+  return source
     .split(' ')
     .filter(Boolean)
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)

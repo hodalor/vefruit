@@ -14,8 +14,13 @@ import HeaderBar from './components/HeaderBar';
 import Admin from './pages/Admin';
 import ProductDetail from './pages/ProductDetail';
 import AdminLogin from './pages/AdminLogin';
+import Messages from './pages/Messages';
+import ProductRequests from './pages/ProductRequests';
+import useRealtimeBridge from './realtime/useRealtimeBridge';
 
 function App() {
+  useRealtimeBridge();
+
   return (
     <div className="App">
       <HeaderBar />
@@ -26,6 +31,8 @@ function App() {
         <Route path="/checkout/callback" element={<CheckoutCallback />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/requests" element={<ProductRequests />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/seller/register" element={<SellerRegister />} />

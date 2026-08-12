@@ -53,6 +53,8 @@ function HeaderBar() {
           <button className="SearchButton" type="submit">Search</button>
         </form>
         <nav className="TopActions">
+          <Link to="/requests">Request Produce</Link>
+          <Link to="/messages">Messages</Link>
           <div className="Account" ref={accountRef}>
             <button className="AccountBtn" type="button" data-open={open} onClick={() => setOpen((v) => !v)}>
               Account <span className="Caret">▾</span>

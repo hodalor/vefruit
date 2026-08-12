@@ -24,6 +24,15 @@ export async function getProduct(id) {
   return data.product;
 }
 
+export async function loadRecommendations(params = {}) {
+  const query = new URLSearchParams();
+  if (params.userId) query.set('userId', params.userId);
+  if (params.q) query.set('q', params.q);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const data = await api.get(`/products/recommendations${suffix}`);
+  return data.products || [];
+}
+
 export async function addProduct({ name, category, price, image, images, inventory, sellerId, description, tags, location, availability }) {
   const imgs = Array.isArray(images) ? images.slice(0, 5) : (image ? [image] : []);
   const tgs = Array.isArray(tags)

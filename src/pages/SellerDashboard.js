@@ -4,7 +4,7 @@ import { addProduct, productsBySeller, updateProduct, deleteProduct, getProductE
 import useProducts from '../products/useProducts';
 import { getOrderEventName, loadOrders, updateOrderStatus } from '../orders/orderService';
 import useCategories from '../categories/useCategories';
-import { formatCategoryLabel } from '../categories/categoryService';
+import { formatCategoryLabel, getCategoryValue } from '../categories/categoryService';
 import { PRODUCT_FALLBACK_IMAGE, THUMB_FALLBACK_IMAGE, resolveProductImage } from '../utils/images';
 
 function SellerDashboard() {
@@ -196,8 +196,10 @@ function SellerDashboard() {
 
   useEffect(() => {
     if (categories.length === 0) return;
-    setForm((prev) => ({ ...prev, category: categories.includes(prev.category) ? prev.category : categories[0] }));
-    setEditForm((prev) => ({ ...prev, category: categories.includes(prev.category) ? prev.category : categories[0] }));
+    const names = categories.map((category) => getCategoryValue(category));
+    const defaultCategory = names[0] || 'fruit';
+    setForm((prev) => ({ ...prev, category: names.includes(prev.category) ? prev.category : defaultCategory }));
+    setEditForm((prev) => ({ ...prev, category: names.includes(prev.category) ? prev.category : defaultCategory }));
   }, [categories]);
 
   if (!current) {
@@ -238,7 +240,7 @@ function SellerDashboard() {
       images: (form.images || []).slice(0, 5),
       sellerId: current.id,
     });
-    setForm({ name: '', category: categories[0] || 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
+    setForm({ name: '', category: getCategoryValue(categories[0]) || 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
     setMessage('Product added');
     setTimeout(() => setMessage(''), 1500);
   };
@@ -278,7 +280,7 @@ function SellerDashboard() {
     setEditingId(p.id);
     setEditForm({
       name: p.name || '',
-      category: p.category || categories[0] || 'fruit',
+      category: p.category || getCategoryValue(categories[0]) || 'fruit',
       price: p.price || '',
       inventory: (p.inventory ?? p.quantity ?? ''),
       description: p.description || '',
@@ -571,7 +573,7 @@ function SellerDashboard() {
                       Category
                       <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                         {categories.map((category) => (
-                          <option key={category} value={category}>{formatCategoryLabel(category)}</option>
+                          <option key={category.id} value={getCategoryValue(category)}>{formatCategoryLabel(category)}</option>
                         ))}
                       </select>
                     </label>
@@ -703,7 +705,7 @@ function SellerDashboard() {
                   Category
                   <select value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
                     {categories.map((category) => (
-                      <option key={category} value={category}>{formatCategoryLabel(category)}</option>
+                      <option key={category.id} value={getCategoryValue(category)}>{formatCategoryLabel(category)}</option>
                     ))}
                   </select>
                 </label>
