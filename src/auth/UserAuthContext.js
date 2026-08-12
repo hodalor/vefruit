@@ -1,21 +1,8 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { api } from '../api/client';
 
 const UserAuthContext = createContext();
-const USERS_KEY = 'vefruit_users_v1';
 const CURRENT_USER_KEY = 'vefruit_current_user_v1';
-
-async function hashPassword(pw) {
-  try {
-    const enc = new TextEncoder().encode(pw);
-    const buf = await crypto.subtle.digest('SHA-256', enc);
-    const view = new DataView(buf);
-    let hex = '';
-    for (let i = 0; i < view.byteLength; i++) hex += ('00' + view.getUint8(i).toString(16)).slice(-2);
-    return hex;
-  } catch {
-    return pw;
-  }
-}
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -35,30 +22,8 @@ function buildBuyerProfile(payload = {}) {
   };
 }
 
-function matchesIdentifier(user, identifier) {
-  const value = String(identifier || '').trim().toLowerCase();
-  if (!value) return false;
-  return normalizeEmail(user.email) === value || normalizePhone(user.phone).toLowerCase() === value;
-}
-
-function readUsers() {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeUsers(list) {
-  try {
-    localStorage.setItem(USERS_KEY, JSON.stringify(list));
-  } catch {}
-}
-
 export function UserAuthProvider({ children }) {
-  const [users, setUsers] = useState(readUsers);
-  const seededRef = useRef(false);
+  const [users, setUsers] = useState([]);
   const [current, setCurrent] = useState(() => {
     try {
       const raw = localStorage.getItem(CURRENT_USER_KEY);
@@ -68,21 +33,11 @@ export function UserAuthProvider({ children }) {
     }
   });
 
-  useEffect(() => { writeUsers(users); }, [users]);
   useEffect(() => {
-    if (seededRef.current) return;
-    (async () => {
-      try {
-        const hasAdmin = users.some((u) => u.role === 'admin');
-        if (!hasAdmin) {
-          const pw = await hashPassword('admin123');
-          const admin = { id: Date.now(), name: 'Admin', email: 'admin@vefruit.local', password: pw, role: 'admin', isVerified: true, createdAt: new Date().toISOString() };
-          setUsers((prev) => [admin, ...prev]);
-        }
-      } catch {}
-      seededRef.current = true;
-    })();
-  }, [users]);
+    api.get('/users')
+      .then((data) => setUsers(data.users || []))
+      .catch(() => setUsers([]));
+  }, []);
   useEffect(() => {
     try {
       if (current) localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(current));
@@ -92,7 +47,6 @@ export function UserAuthProvider({ children }) {
 
   useEffect(() => {
     const onStorage = (event) => {
-      if (event.key === USERS_KEY) setUsers(readUsers());
       if (event.key === CURRENT_USER_KEY) {
         try {
           const raw = localStorage.getItem(CURRENT_USER_KEY);
@@ -107,35 +61,25 @@ export function UserAuthProvider({ children }) {
   }, []);
 
   const register = async ({ name, email, password, role, phone, address, idType, idNumber }) => {
-    const normalizedEmail = normalizeEmail(email);
-    const normalizedPhone = normalizePhone(phone);
-    const requiresPhone = role !== 'admin';
-    if (requiresPhone && !normalizedPhone) throw new Error('Phone number is required');
-    const emailExists = normalizedEmail && users.find((u) => normalizeEmail(u.email) === normalizedEmail);
-    if (emailExists) throw new Error('Email already registered');
-    const phoneExists = normalizedPhone && users.find((u) => normalizePhone(u.phone) === normalizedPhone);
-    if (phoneExists) throw new Error('Phone number already registered');
-    const hashed = await hashPassword(password);
-    const profile = buildBuyerProfile({ phone, email, address, idType, idNumber });
-    const user = {
-      id: Date.now(),
+    const payload = {
       name,
-      ...profile,
-      password: hashed,
+      ...buildBuyerProfile({ phone, email, address, idType, idNumber }),
+      password,
       role,
-      isVerified: true,
-      createdAt: new Date().toISOString(),
     };
-    setUsers((prev) => [user, ...prev]);
+    const data = role === 'admin'
+      ? await api.post('/users', payload)
+      : await api.post('/auth/register-buyer', payload);
+    const user = data.user;
+    setUsers((prev) => [user, ...prev.filter((entry) => entry.id !== user.id)]);
     setCurrent(user);
     return user;
   };
 
   const login = async ({ identifier, email, password }) => {
     const lookup = identifier || email;
-    const hashed = await hashPassword(password);
-    const user = users.find((u) => matchesIdentifier(u, lookup) && u.password === hashed);
-    if (!user) throw new Error('Invalid credentials');
+    const data = await api.post('/auth/login-user', { identifier: lookup, password });
+    const user = data.user;
     setCurrent(user);
     return user;
   };
@@ -143,19 +87,19 @@ export function UserAuthProvider({ children }) {
   const logout = () => setCurrent(null);
 
   const updateUser = (id, patch) => {
-    setUsers((prev) => {
-      const updated = prev.map((u) => (u.id === id ? { ...u, ...patch } : u));
-      const cur = updated.find((u) => u.id === current?.id);
-      if (cur && cur.id === id) {
-        try { localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(cur)); } catch {}
-      }
-      return updated;
+    return api.patch(`/users/${id}`, patch).then((data) => {
+      const user = data.user;
+      setUsers((prev) => prev.map((entry) => (entry.id === id ? user : entry)));
+      if (current?.id === id) setCurrent(user);
+      return user;
     });
   };
 
   const deleteUser = (id) => {
-    setUsers((prev) => prev.filter((u) => u.id !== id));
-    if (current?.id === id) setCurrent(null);
+    return api.delete(`/users/${id}`).then(() => {
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      if (current?.id === id) setCurrent(null);
+    });
   };
 
   const value = { users, current, register, login, logout, updateUser, deleteUser };

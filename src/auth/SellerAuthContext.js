@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { api } from '../api/client';
 
 const SellerAuthContext = createContext();
-const SELLERS_KEY = 'vefruit_sellers_v1';
 const CURRENT_KEY = 'vefruit_current_seller_v1';
 
 function normalizeEmail(email) {
@@ -33,29 +33,8 @@ function buildFarmerProfile(payload = {}) {
   };
 }
 
-function matchesIdentifier(user, identifier) {
-  const value = String(identifier || '').trim().toLowerCase();
-  if (!value) return false;
-  return normalizeEmail(user.email) === value || normalizePhone(user.phone).toLowerCase() === value;
-}
-
-function readSellers() {
-  try {
-    const raw = localStorage.getItem(SELLERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeSellers(list) {
-  try {
-    localStorage.setItem(SELLERS_KEY, JSON.stringify(list));
-  } catch {}
-}
-
 export function SellerAuthProvider({ children }) {
-  const [sellers, setSellers] = useState(readSellers);
+  const [sellers, setSellers] = useState([]);
   const [current, setCurrent] = useState(() => {
     try {
       const raw = localStorage.getItem(CURRENT_KEY);
@@ -66,14 +45,13 @@ export function SellerAuthProvider({ children }) {
   });
 
   useEffect(() => {
-    writeSellers(sellers);
-  }, [sellers]);
+    api.get('/farmers')
+      .then((data) => setSellers(data.farmers || []))
+      .catch(() => setSellers([]));
+  }, []);
 
   useEffect(() => {
     const onStorage = (event) => {
-      if (event.key === SELLERS_KEY) {
-        setSellers(readSellers());
-      }
       if (event.key === CURRENT_KEY) {
         try {
           const raw = localStorage.getItem(CURRENT_KEY);
@@ -95,83 +73,57 @@ export function SellerAuthProvider({ children }) {
     } catch {}
   }, [current]);
 
-  const register = ({ name, email, password, phone, address, idType, idNumber, businessName, businessAddress, businessPhone, registrationNumber, bankName, branchName, branchCode, accountName, accountNumber, mobileMoneyNumber, mobileMoneyMtnName }) => {
-    const normalizedEmail = normalizeEmail(email);
-    const normalizedPhone = normalizePhone(phone);
-    if (!normalizedPhone) throw new Error('Phone number is required');
-    const emailExists = normalizedEmail && sellers.find((s) => normalizeEmail(s.email) === normalizedEmail);
-    if (emailExists) throw new Error('Email already registered');
-    const phoneExists = sellers.find((s) => normalizePhone(s.phone) === normalizedPhone);
-    if (phoneExists) throw new Error('Phone number already registered');
-    const profile = buildFarmerProfile({
-      phone,
-      email,
-      address,
-      idType,
-      idNumber,
-      businessName,
-      businessAddress,
-      businessPhone,
-      registrationNumber,
-      bankName,
-      branchName,
-      branchCode,
-      accountName,
-      accountNumber,
-      mobileMoneyNumber,
-      mobileMoneyMtnName,
+  const register = (payload) => {
+    return api.post('/auth/register-farmer', {
+      name: payload.name,
+      ...buildFarmerProfile(payload),
+      password: payload.password,
+    }).then((data) => {
+      const seller = data.user;
+      setSellers((prev) => [seller, ...prev.filter((entry) => entry.id !== seller.id)]);
+      setCurrent(seller);
+      return seller;
     });
-    const seller = {
-      id: Date.now(),
-      name,
-      ...profile,
-      password,
-      approved: false,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    };
-    setSellers((prev) => [seller, ...prev]);
-    setCurrent(seller);
-    return seller;
   };
 
   const login = ({ identifier, email, password }) => {
     const lookup = identifier || email;
-    const seller = sellers.find((s) => matchesIdentifier(s, lookup) && s.password === password);
-    if (!seller) throw new Error('Invalid credentials');
-    if (!seller.approved || seller.status === 'suspended' || seller.status === 'blocked' || seller.status === 'rejected') {
-      const reason = seller.status === 'blocked'
-        ? 'blocked'
-        : (seller.status === 'suspended'
-          ? 'suspended'
-          : (seller.status === 'rejected' ? 'rejected' : 'not approved'));
-      throw new Error(`Farmer ${reason}`);
-    }
-    setCurrent(seller);
-    return seller;
+    return api.post('/auth/login-farmer', { identifier: lookup, password }).then((data) => {
+      const seller = data.user;
+      setCurrent(seller);
+      return seller;
+    });
   };
 
   const logout = () => setCurrent(null);
 
-  const updateSeller = (id, patch) => {
-    setSellers((prev) => {
-      const updated = prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
-      const cur = updated.find((s) => s.id === current?.id);
-      if (cur && cur.id === id) {
-        try { localStorage.setItem(CURRENT_KEY, JSON.stringify(cur)); } catch {}
-      }
-      return updated;
+  const updateSellerStatus = (id, status) => {
+    return api.patch(`/farmers/${id}/status`, { status }).then((data) => {
+      const seller = data.farmer;
+      setSellers((prev) => prev.map((entry) => (entry.id === id ? seller : entry)));
+      if (current?.id === id) setCurrent(seller);
+      return seller;
     });
   };
 
-  const approveSeller = (id) => updateSeller(id, { approved: true, status: 'approved' });
-  const rejectSeller = (id) => updateSeller(id, { approved: false, status: 'rejected' });
-  const suspendSeller = (id) => updateSeller(id, { approved: false, status: 'suspended' });
-  const blockSeller = (id) => updateSeller(id, { approved: false, status: 'blocked' });
-  const unblockSeller = (id) => updateSeller(id, { approved: true, status: 'approved' });
+  const approveSeller = (id) => updateSellerStatus(id, 'approved');
+  const rejectSeller = (id) => updateSellerStatus(id, 'rejected');
+  const suspendSeller = (id) => updateSellerStatus(id, 'suspended');
+  const blockSeller = (id) => updateSellerStatus(id, 'blocked');
+  const unblockSeller = (id) => updateSellerStatus(id, 'approved');
+  const updateSeller = (id, patch) => {
+    return api.patch(`/users/${id}`, patch).then((data) => {
+      const seller = data.user;
+      setSellers((prev) => prev.map((entry) => (entry.id === id ? seller : entry)));
+      if (current?.id === id) setCurrent(seller);
+      return seller;
+    });
+  };
   const deleteSeller = (id) => {
-    setSellers((prev) => prev.filter((s) => s.id !== id));
-    if (current?.id === id) setCurrent(null);
+    return api.delete(`/farmers/${id}`).then(() => {
+      setSellers((prev) => prev.filter((s) => s.id !== id));
+      if (current?.id === id) setCurrent(null);
+    });
   };
 
   const value = {

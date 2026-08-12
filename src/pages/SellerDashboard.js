@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSellerAuth } from '../auth/SellerAuthContext';
-import { addProduct, productsBySeller, updateProduct, loadProducts, deleteProduct } from '../products/productService';
-import { loadOrders, updateOrderStatus } from '../orders/orderService';
+import { addProduct, productsBySeller, updateProduct, deleteProduct, getProductEventName } from '../products/productService';
+import useProducts from '../products/useProducts';
+import { getOrderEventName, loadOrders, updateOrderStatus } from '../orders/orderService';
 import useCategories from '../categories/useCategories';
 import { formatCategoryLabel } from '../categories/categoryService';
+import { PRODUCT_FALLBACK_IMAGE, THUMB_FALLBACK_IMAGE, resolveProductImage } from '../utils/images';
 
 function SellerDashboard() {
   const { current, logout } = useSellerAuth();
@@ -12,13 +14,42 @@ function SellerDashboard() {
   const [form, setForm] = useState({ name: '', category: 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', category: 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
-  const [myProducts, setMyProducts] = useState(() => (current ? productsBySeller(current.id) : []));
+  const [myProducts, setMyProducts] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [message, setMessage] = useState('');
   const [revTooltip, setRevTooltip] = useState(null);
+  const allProducts = useProducts();
 
-  const orders = loadOrders();
-  const productsMap = useMemo(() => new Map(loadProducts().map((p) => [p.id, p])), []);
   const sellerId = current?.id;
+  const productsMap = useMemo(() => new Map(allProducts.map((p) => [p.id, p])), [allProducts]);
+
+  useEffect(() => {
+    if (!sellerId) {
+      setMyProducts([]);
+      return undefined;
+    }
+
+    const sync = () => productsBySeller(sellerId).then(setMyProducts).catch(() => setMyProducts([]));
+    sync();
+    window.addEventListener(getProductEventName(), sync);
+    return () => {
+      window.removeEventListener(getProductEventName(), sync);
+    };
+  }, [sellerId]);
+
+  useEffect(() => {
+    if (!sellerId) {
+      setOrders([]);
+      return undefined;
+    }
+
+    const sync = () => loadOrders({ sellerId }).then(setOrders).catch(() => setOrders([]));
+    sync();
+    window.addEventListener(getOrderEventName(), sync);
+    return () => {
+      window.removeEventListener(getOrderEventName(), sync);
+    };
+  }, [sellerId]);
   const myOrderItems = useMemo(() => {
     const list = [];
     orders.forEach((o) => {
@@ -29,8 +60,18 @@ function SellerDashboard() {
         const prod = productsMap.get(pid);
         const qty = i.quantity || i.qty || 0;
         const price = i.price || (prod ? prod.price : 0);
-        if (prod && sellerId && prod.sellerId === sellerId) {
-          list.push({ orderId: o.id, placedAt, status, productId: pid, name: prod.name, qty, price });
+        if (prod && sellerId && (prod.sellerId === sellerId || i.sellerId === sellerId)) {
+          list.push({
+            orderId: o.id,
+            placedAt,
+            status,
+            productId: pid,
+            name: prod.name,
+            qty,
+            price,
+            neededBy: o.neededBy || '',
+            requestNote: o.requestNote || '',
+          });
         }
       });
     });
@@ -185,9 +226,9 @@ function SellerDashboard() {
     );
   }
 
-  const submitProduct = (e) => {
+  const submitProduct = async (e) => {
     e.preventDefault();
-    const created = addProduct({
+    await addProduct({
       name: form.name,
       category: form.category,
       price: form.price,
@@ -197,15 +238,13 @@ function SellerDashboard() {
       images: (form.images || []).slice(0, 5),
       sellerId: current.id,
     });
-    setMyProducts([created, ...myProducts]);
     setForm({ name: '', category: categories[0] || 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
     setMessage('Product added');
     setTimeout(() => setMessage(''), 1500);
   };
 
-  const saveProduct = (p) => {
-    const updated = updateProduct(p.id, { price: Number(p.price), inventory: Number(p.inventory) });
-    setMyProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+  const saveProduct = async (p) => {
+    await updateProduct(p.id, { price: Number(p.price), inventory: Number(p.inventory) });
     setMessage('Product updated');
     setTimeout(() => setMessage(''), 1500);
   };
@@ -257,8 +296,8 @@ function SellerDashboard() {
     setEditForm((prev) => ({ ...prev, images: (prev.images || []).filter((_, i) => i !== idx) }));
   };
 
-  const saveEdit = () => {
-    const updated = updateProduct(editingId, {
+  const saveEdit = async () => {
+    await updateProduct(editingId, {
       name: editForm.name,
       category: editForm.category,
       price: Number(editForm.price),
@@ -268,7 +307,6 @@ function SellerDashboard() {
       images: (editForm.images || []).slice(0, 5),
       image: (editForm.images || [])[0] || null,
     });
-    setMyProducts((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
     setEditingId(null);
     setMessage('Product updated');
     setTimeout(() => setMessage(''), 1500);
@@ -278,18 +316,17 @@ function SellerDashboard() {
     setEditingId(null);
   };
 
-  const removeProduct = (id) => {
-    deleteProduct(id);
-    setMyProducts((prev) => prev.filter((x) => x.id !== id));
+  const removeProduct = async (id) => {
+    await deleteProduct(id);
     if (editingId === id) setEditingId(null);
     setMessage('Product deleted');
     setTimeout(() => setMessage(''), 1500);
   };
 
-  const advanceOrderStatus = (orderId, currentStatus) => {
+  const advanceOrderStatus = async (orderId, currentStatus) => {
     const next = currentStatus === 'processing' ? 'packed' : (currentStatus === 'packed' ? 'shipped' : null);
     if (!next) return;
-    updateOrderStatus(orderId, next);
+    await updateOrderStatus(orderId, next);
     setMessage(`Order #${orderId} marked ${next}`);
     setTimeout(() => setMessage(''), 1500);
   };
@@ -563,7 +600,7 @@ function SellerDashboard() {
                         <div className="Thumbs" style={{ marginTop: '0.5rem' }}>
                           {(form.images || []).map((src, idx) => (
                             <div key={idx} className="Thumb">
-                              <img src={src} alt={`img-${idx}`} onError={(e) => { e.currentTarget.src = 'https://placehold.co/80x80'; }} />
+                              <img src={src} alt={`img-${idx}`} onError={(e) => { e.currentTarget.src = THUMB_FALLBACK_IMAGE; }} />
                               <button type="button" className="BtnOutline" onClick={() => removeFormImage(idx)}>Remove</button>
                             </div>
                           ))}
@@ -585,17 +622,10 @@ function SellerDashboard() {
                   {myProducts.map((p) => (
                     <div className="Card" key={p.id}>
                       <img
-                        src={(function(){
-                          const base = p.image || (p.images && p.images[0]) || 'https://placehold.co/400x300?text=Product';
-                          if (typeof base === 'string' && base.startsWith('http')) {
-                            const hostPath = base.replace(/^https?:\/\//, '');
-                            return `https://images.weserv.nl/?url=${hostPath}&w=400&h=300&fit=cover`;
-                          }
-                          return base;
-                        })()}
+                        src={resolveProductImage(p)}
                         alt={p.name}
                         referrerPolicy="no-referrer"
-                        onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300?text=Product'; }}
+                        onError={(e) => { e.currentTarget.src = PRODUCT_FALLBACK_IMAGE; }}
                       />
                       <div className="CardBody">
                         <h3>{p.name}</h3>
@@ -639,6 +669,8 @@ function SellerDashboard() {
                         {i.name} × {i.qty} — GHS { (i.price * i.qty).toFixed(2) }
                       </div>
                       <div className="OrderTotal">Status: {i.status}</div>
+                      {i.neededBy && <div className="Muted">Needed by: {i.neededBy}</div>}
+                      {i.requestNote && <div className="Muted">Request: {i.requestNote}</div>}
                       {(i.status === 'processing' || i.status === 'packed') && (
                         <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                           {i.status === 'processing' && (
@@ -700,7 +732,7 @@ function SellerDashboard() {
                     <div className="Thumbs" style={{ marginTop: '0.5rem' }}>
                       {(editForm.images || []).map((src, idx) => (
                         <div key={idx} className="Thumb">
-                          <img src={src} alt={`img-${idx}`} onError={(e) => { e.currentTarget.src = 'https://placehold.co/80x80'; }} />
+                          <img src={src} alt={`img-${idx}`} onError={(e) => { e.currentTarget.src = THUMB_FALLBACK_IMAGE; }} />
                           <button type="button" className="BtnOutline" onClick={() => removeEditImage(idx)}>Remove</button>
                         </div>
                       ))}

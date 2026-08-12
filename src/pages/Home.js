@@ -2,9 +2,10 @@ import useProducts from '../products/useProducts';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useEffect, useMemo, useState } from 'react';
-import { loadHeroSlides } from '../hero/heroService';
+import useHeroSlides from '../hero/useHeroSlides';
 import useCategories from '../categories/useCategories';
 import { formatCategoryLabel } from '../categories/categoryService';
+import { HERO_FALLBACK_IMAGE, PRODUCT_FALLBACK_IMAGE, resolveImageSource, resolveProductImage } from '../utils/images';
 
 function Home() {
   const products = useProducts();
@@ -12,7 +13,7 @@ function Home() {
   const { sellers } = useSellerAuth();
   const [params] = useSearchParams();
   const q = (params.get('q') || '').toLowerCase();
-  const slides = useMemo(() => loadHeroSlides(), []);
+  const slides = useHeroSlides();
   const [idx, setIdx] = useState(0);
   const n = slides.length;
   useEffect(() => {
@@ -20,14 +21,6 @@ function Home() {
     const id = setInterval(() => setIdx((i) => (i + 1) % n), 4000);
     return () => clearInterval(id);
   }, [n]);
-  const resolveSrc = (p) => {
-    const base = p.image || (p.images && p.images[0]) || 'https://placehold.co/400x300?text=Product';
-    if (typeof base === 'string' && base.startsWith('http')) {
-      const hostPath = base.replace(/^https?:\/\//, '');
-      return `https://images.weserv.nl/?url=${hostPath}&w=400&h=300&fit=cover`;
-    }
-    return base;
-  };
   const filtered = q
     ? products.filter((p) => {
         const sellerName = p.sellerId ? (sellers.find((s) => s.id === p.sellerId)?.name || '') : '';
@@ -67,11 +60,11 @@ function Home() {
         <div className="HeroSlider">
           {n === 0 ? (
             <div className="HeroSlide">
-              <img className="HeroImg" src="https://placehold.co/1000x380?text=Fresh+Produce" alt="hero" />
+              <img className="HeroImg" src={HERO_FALLBACK_IMAGE} alt="hero" />
             </div>
           ) : (
             <div className="HeroSlide">
-              <img className="HeroImg" src={slides[idx].image} alt={slides[idx].title} onError={(e) => { e.currentTarget.src = 'https://placehold.co/1000x380?text=Fresh+Produce'; }} />
+              <img className="HeroImg" src={resolveImageSource(slides[idx].image, HERO_FALLBACK_IMAGE, 'landscape_16_9')} alt={slides[idx].title} onError={(e) => { e.currentTarget.src = HERO_FALLBACK_IMAGE; }} />
               <div className="HeroCaption">
                 <h2>{slides[idx].title}</h2>
                 {slides[idx].cta && <a className="Btn" href={slides[idx].cta.href}>{slides[idx].cta.text}</a>}
@@ -107,10 +100,10 @@ function Home() {
           {filtered.map((p) => (
             <Link className="Card" key={p.id} to={`/product/${p.id}`}>
               <img
-                src={resolveSrc(p)}
+                src={resolveProductImage(p)}
                 alt={p.name}
                 referrerPolicy="no-referrer"
-                onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300?text=Product'; }}
+                onError={(e) => { e.currentTarget.src = PRODUCT_FALLBACK_IMAGE; }}
               />
               <div className="CardBody">
                 <h3>{p.name}</h3>

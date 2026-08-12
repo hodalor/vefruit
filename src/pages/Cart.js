@@ -1,11 +1,12 @@
 import { useCart } from '../cart/CartContext';
 import { Link } from 'react-router-dom';
 import { useMemo } from 'react';
-import { loadProducts } from '../products/productService';
+import useProducts from '../products/useProducts';
 
 function Cart() {
   const { items, updateQty, removeItem, total } = useCart();
-  const productsMap = useMemo(() => new Map(loadProducts().map((p) => [p.id, p])), []);
+  const products = useProducts();
+  const productsMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   return (
     <main className="Container">
       <h2>Your Cart</h2>
@@ -26,7 +27,7 @@ function Cart() {
                   min={1}
                   max={inv}
                   value={i.qty}
-                  onChange={(e) => updateQty(i.id, Number(e.target.value))}
+                  onChange={(e) => updateQty(i.id, Number(e.target.value), inv)}
                 />
                 ); })()}
                 <button className="BtnOutline" onClick={() => removeItem(i.id)}>Remove</button>

@@ -1,27 +1,30 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { loadProducts } from '../products/productService';
+import { getProduct } from '../products/productService';
 import { useCart } from '../cart/CartContext';
 import { useUserAuth } from '../auth/UserAuthContext';
+import { PRODUCT_FALLBACK_IMAGE, resolveProductImage } from '../utils/images';
 
 function ProductDetail() {
   const { id } = useParams();
-  const pid = Number(id);
-  const product = useMemo(() => loadProducts().find((p) => p.id === pid), [pid]);
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
   const { addItem } = useCart();
   const { current } = useUserAuth();
   const navigate = useNavigate();
   const [qty, setQty] = useState(1);
   const maxQty = Number(product?.inventory ?? product?.quantity ?? 99);
 
-  const src = (() => {
-    const base = product ? (product.image || (product.images && product.images[0]) || 'https://placehold.co/600x400?text=Product') : 'https://placehold.co/600x400?text=Product';
-    if (typeof base === 'string' && base.startsWith('http')) {
-      const hostPath = base.replace(/^https?:\/\//, '');
-      return `https://images.weserv.nl/?url=${hostPath}&w=800&h=500&fit=cover`;
-    }
-    return base;
-  })();
+  useEffect(() => {
+    setLoading(true);
+    getProduct(id)
+      .then((data) => {
+        setProduct(data);
+        setQty(1);
+      })
+      .catch(() => setProduct(null))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   const add = () => {
     if (!product) return;
@@ -32,6 +35,14 @@ function ProductDetail() {
     addItem(product, Math.max(1, Math.min(Number(qty) || 1, maxQty || 1)));
     navigate('/cart');
   };
+
+  if (loading) {
+    return (
+      <main className="Container">
+        <h2>Loading Product...</h2>
+      </main>
+    );
+  }
 
   if (!product) {
     return (
@@ -48,10 +59,10 @@ function ProductDetail() {
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 540px) 1fr', gap: '1.5rem', alignItems: 'start' }}>
           <div>
             <img
-              src={src}
+              src={resolveProductImage(product)}
               alt={product.name}
               referrerPolicy="no-referrer"
-              onError={(e) => { e.currentTarget.src = 'https://placehold.co/600x400?text=Product'; }}
+              onError={(e) => { e.currentTarget.src = PRODUCT_FALLBACK_IMAGE; }}
               style={{ width: '100%', height: 'auto', borderRadius: 12, border: '1px solid #e2e8f0' }}
             />
           </div>

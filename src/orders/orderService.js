@@ -1,28 +1,32 @@
-const ORDERS_KEY = 'vefruit_orders_v1';
+import { api } from '../api/client';
 
-export function loadOrders() {
-  try {
-    const raw = localStorage.getItem(ORDERS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+const ORDER_EVENT = 'vefruit-orders-changed';
+
+function emitOrdersChange() {
+  window.dispatchEvent(new Event(ORDER_EVENT));
 }
 
-export function saveOrder(order) {
-  const orders = loadOrders();
-  const withId = { id: Date.now(), ...order };
-  try {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify([withId, ...orders]));
-  } catch {}
-  return withId;
+export async function loadOrders(params = {}) {
+  const query = new URLSearchParams();
+  if (params.buyerId) query.set('buyerId', params.buyerId);
+  if (params.sellerId) query.set('sellerId', params.sellerId);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const data = await api.get(`/orders${suffix}`);
+  return data.orders || [];
 }
 
-export function updateOrderStatus(id, status) {
-  const orders = loadOrders();
-  const updated = orders.map((o) => (o.id === id ? { ...o, orderStatus: status, updatedAt: new Date().toISOString() } : o));
-  try {
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(updated));
-  } catch {}
-  return updated.find((o) => o.id === id);
+export async function saveOrder(order) {
+  const data = await api.post('/orders', order);
+  emitOrdersChange();
+  return data.order;
+}
+
+export async function updateOrderStatus(id, status) {
+  const data = await api.patch(`/orders/${id}/status`, { status });
+  emitOrdersChange();
+  return data.order;
+}
+
+export function getOrderEventName() {
+  return ORDER_EVENT;
 }

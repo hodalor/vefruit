@@ -1,5 +1,4 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { loadProducts } from '../products/productService';
 
 const CartContext = createContext();
 
@@ -24,8 +23,7 @@ export function CartProvider({ children }) {
   const addItem = (product, qty = 1) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === product.id);
-      const prod = loadProducts().find((p) => p.id === product.id);
-      const inv = Number(prod?.inventory ?? prod?.quantity ?? Infinity);
+      const inv = Number(product?.inventory ?? product?.quantity ?? Infinity);
       const safeQty = Math.max(1, Number(qty) || 1);
       if (existing) {
         const newQty = Math.min(inv, existing.qty + safeQty);
@@ -48,10 +46,8 @@ export function CartProvider({ children }) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const updateQty = (id, qty) => {
-    const prod = loadProducts().find((p) => p.id === id);
-    const inv = Number(prod?.inventory ?? prod?.quantity ?? Infinity);
-    const next = Math.min(Math.max(1, qty), inv);
+  const updateQty = (id, qty, maxQty = Infinity) => {
+    const next = Math.min(Math.max(1, Number(qty) || 1), Number(maxQty) || Infinity);
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: next } : i)));
   };
 

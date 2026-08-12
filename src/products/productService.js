@@ -1,6 +1,5 @@
-import seed from '../products';
+import { api } from '../api/client';
 
-const PRODUCTS_KEY = 'vefruit_products_v1';
 const PRODUCT_EVENT = 'vefruit-products-changed';
 
 function normalizeCategory(value) {
@@ -11,85 +10,58 @@ function emitProductsChange() {
   window.dispatchEvent(new Event(PRODUCT_EVENT));
 }
 
-export function loadProducts() {
-  try {
-    const raw = localStorage.getItem(PRODUCTS_KEY);
-    if (raw) {
-      const list = JSON.parse(raw);
-      const byId = new Map(list.map((p) => [p.id, p]));
-      let changed = false;
-      seed.forEach((sp) => {
-        const p = byId.get(sp.id);
-        if (p) {
-          const isPlaceholder = typeof p.image === 'string' && p.image.includes('placehold.co');
-          if (!p.image || isPlaceholder) {
-            p.image = sp.image;
-            if (!p.images || p.images.length === 0) p.images = sp.image ? [sp.image] : [];
-            changed = true;
-          }
-        }
-      });
-      if (changed) {
-        try { localStorage.setItem(PRODUCTS_KEY, JSON.stringify(Array.from(byId.values()))); } catch {}
-      }
-      return Array.from(byId.values());
-    }
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(seed));
-    return seed;
-  } catch {
-    return seed;
-  }
+export async function loadProducts(params = {}) {
+  const query = new URLSearchParams();
+  if (params.q) query.set('q', params.q);
+  if (params.sellerId) query.set('sellerId', params.sellerId);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const data = await api.get(`/products${suffix}`);
+  return data.products || [];
 }
 
-export function saveProducts(list) {
-  try {
-    localStorage.setItem(PRODUCTS_KEY, JSON.stringify(list));
-  } catch {}
-  emitProductsChange();
+export async function getProduct(id) {
+  const data = await api.get(`/products/${id}`);
+  return data.product;
 }
 
-export function addProduct({ name, category, price, image, images, inventory, sellerId, description, tags }) {
-  const list = loadProducts();
-  const qty = Number(inventory) || 0;
+export async function addProduct({ name, category, price, image, images, inventory, sellerId, description, tags, location, availability }) {
   const imgs = Array.isArray(images) ? images.slice(0, 5) : (image ? [image] : []);
   const tgs = Array.isArray(tags)
     ? tags
-    : (typeof tags === 'string' ? tags.split(',').map((s) => s.trim()).filter(Boolean) : []);
-  const product = {
-    id: Date.now(),
+    : String(tags || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean);
+  const data = await api.post('/products', {
     name,
-    description: description || '',
-    price: Number(price),
-    quantity: qty,
     category: normalizeCategory(category),
+    price: Number(price),
+    inventory: Number(inventory) || 0,
+    sellerId,
+    description: description || '',
+    image: imgs[0] || image || '',
     images: imgs,
-    sellerId: sellerId || null,
-    createdAt: new Date().toISOString(),
-    image: imgs[0] || image || null,
-    inventory: qty,
     tags: tgs,
-  };
-  const updated = [product, ...list];
-  saveProducts(updated);
-  return product;
+    location: location || '',
+    availability: availability || 'available',
+  });
+  emitProductsChange();
+  return data.product;
 }
 
-export function updateProduct(id, patch) {
-  const list = loadProducts();
-  const updated = list.map((p) => (p.id === id ? { ...p, ...patch, category: patch.category ? normalizeCategory(patch.category) : p.category } : p));
-  saveProducts(updated);
-  return updated.find((p) => p.id === id);
+export async function updateProduct(id, patch) {
+  const data = await api.patch(`/products/${id}`, patch);
+  emitProductsChange();
+  return data.product;
 }
 
-export function productsBySeller(sellerId) {
-  const list = loadProducts();
-  return list.filter((p) => p.sellerId === sellerId);
+export async function productsBySeller(sellerId) {
+  return loadProducts({ sellerId });
 }
 
-export function deleteProduct(id) {
-  const list = loadProducts();
-  const updated = list.filter((p) => p.id !== id);
-  saveProducts(updated);
+export async function deleteProduct(id) {
+  await api.delete(`/products/${id}`);
+  emitProductsChange();
   return true;
 }
 

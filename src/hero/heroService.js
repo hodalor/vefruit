@@ -1,67 +1,40 @@
-const HERO_KEY = 'vefruit_hero_v1';
+import { api } from '../api/client';
 
-const defaults = [
-  {
-    id: 1,
-    title: 'Fresh Vegetables Daily',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Tomato_je.jpg?width=1200',
-    cta: { text: 'Shop Now', href: '/' },
-  },
-  {
-    id: 2,
-    title: 'Organic Greens',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Spinach_leaves.jpg?width=1200',
-    cta: { text: 'See Vegetables', href: '/' },
-  },
-  {
-    id: 3,
-    title: 'Farm-to-Table Fruits',
-    image: 'https://commons.wikimedia.org/wiki/Special:FilePath/Red_Apple.jpg?width=1200',
-    cta: { text: 'Browse Fruits', href: '/' },
-  },
-];
+const HERO_EVENT = 'vefruit-hero-changed';
 
-export function loadHeroSlides() {
-  try {
-    const raw = localStorage.getItem(HERO_KEY);
-    if (raw) return JSON.parse(raw);
-    localStorage.setItem(HERO_KEY, JSON.stringify(defaults));
-    return defaults;
-  } catch {
-    return defaults;
-  }
+function emitHeroChange() {
+  window.dispatchEvent(new Event(HERO_EVENT));
 }
 
-export function saveHeroSlides(slides) {
-  try { localStorage.setItem(HERO_KEY, JSON.stringify(slides)); } catch {}
+export async function loadHeroSlides() {
+  const data = await api.get('/hero-slides');
+  return data.slides || [];
 }
 
-export function addHeroSlide(slide) {
-  const slides = loadHeroSlides();
-  const withId = { id: Date.now(), ...slide };
-  const updated = [withId, ...slides];
-  saveHeroSlides(updated);
-  return withId;
+export async function addHeroSlide(slide) {
+  const data = await api.post('/hero-slides', slide);
+  emitHeroChange();
+  return data.slide;
 }
 
-export function updateHeroSlide(id, patch) {
-  const slides = loadHeroSlides();
-  const updated = slides.map((s) => (s.id === id ? { ...s, ...patch } : s));
-  saveHeroSlides(updated);
-  return updated.find((s) => s.id === id);
+export async function updateHeroSlide(id, patch) {
+  const data = await api.patch(`/hero-slides/${id}`, patch);
+  emitHeroChange();
+  return data.slide;
 }
 
-export function deleteHeroSlide(id) {
-  const slides = loadHeroSlides();
-  const updated = slides.filter((s) => s.id !== id);
-  saveHeroSlides(updated);
+export async function deleteHeroSlide(id) {
+  await api.delete(`/hero-slides/${id}`);
+  emitHeroChange();
   return true;
 }
 
-export function reorderHeroSlides(idsInOrder) {
-  const slides = loadHeroSlides();
-  const byId = new Map(slides.map((s) => [s.id, s]));
-  const updated = idsInOrder.map((id) => byId.get(id)).filter(Boolean);
-  saveHeroSlides(updated);
-  return updated;
+export async function reorderHeroSlides(idsInOrder) {
+  const data = await api.post('/hero-slides/reorder', { ids: idsInOrder });
+  emitHeroChange();
+  return data.slides || [];
+}
+
+export function getHeroEventName() {
+  return HERO_EVENT;
 }

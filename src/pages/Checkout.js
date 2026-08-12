@@ -1,37 +1,63 @@
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useCart } from '../cart/CartContext';
-import { saveOrder } from '../orders/orderService';
-import { loadProducts, updateProduct } from '../products/productService';
 import { useUserAuth } from '../auth/UserAuthContext';
+import { initializePayment } from '../payments/paymentService';
+
+const PENDING_CHECKOUT_KEY = 'vefruit_pending_checkout_v1';
 
 function Checkout() {
-  const { items, total, clearCart } = useCart();
+  const { items, total } = useCart();
   const navigate = useNavigate();
   const { current } = useUserAuth();
+  const [contactEmail, setContactEmail] = useState(current?.email || '');
+  const [neededBy, setNeededBy] = useState('');
+  const [requestNote, setRequestNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!current) {
       navigate('/login');
       return;
     }
+    const email = String(contactEmail || current.email || '').trim();
+    if (!email) {
+      setError('An email address is required for Paystack checkout.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
     const order = {
       buyerId: current.id,
       items: items.map((i) => ({ productId: i.id, quantity: i.qty, price: i.price })),
       totalAmount: total,
-      paymentStatus: 'paid',
-      orderStatus: 'processing',
-      createdAt: new Date().toISOString(),
+      paymentStatus: 'pending',
+      orderStatus: 'pending-payment',
+      neededBy,
+      requestNote,
     };
-    const list = loadProducts();
-    order.items.forEach((i) => {
-      const p = list.find((x) => x.id === i.productId);
-      const inv = Number(p?.inventory ?? p?.quantity ?? 0);
-      const next = Math.max(0, inv - i.quantity);
-      if (p) updateProduct(p.id, { inventory: next, quantity: next });
-    });
-    saveOrder(order);
-    clearCart();
-    navigate('/orders');
+    try {
+      sessionStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify(order));
+      const payment = await initializePayment({
+        email,
+        amount: Math.round(total * 100),
+        metadata: {
+          buyerId: current.id,
+          neededBy,
+          requestNote,
+          mobileMoneySupported: true,
+        },
+        callback_url: `${window.location.origin}/checkout/callback`,
+      });
+      if (!payment?.authorization_url) {
+        throw new Error('Unable to start Paystack checkout');
+      }
+      window.location.assign(payment.authorization_url);
+    } catch (err) {
+      setError(err.message || 'Unable to start payment');
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -47,7 +73,24 @@ function Checkout() {
             ))}
           </ul>
           <p><strong>Total:</strong> GHS {total.toFixed(2)}</p>
-          <button className="Btn" onClick={handlePay}>Pay (Test Mode)</button>
+          <div className="Form" style={{ marginTop: '1rem', maxWidth: 520 }}>
+            <label>
+              Payment Email
+              <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
+            </label>
+            <label>
+              Needed By
+              <input type="date" value={neededBy} onChange={(e) => setNeededBy(e.target.value)} />
+            </label>
+            <label>
+              Product Request Note
+              <textarea rows="4" value={requestNote} onChange={(e) => setRequestNote(e.target.value)} placeholder="Add delivery details or extra produce requirements." />
+            </label>
+            {error && <p style={{ color: 'crimson', margin: 0 }}>{error}</p>}
+            <button className="Btn" onClick={handlePay} disabled={submitting}>
+              {submitting ? 'Redirecting...' : 'Pay With Paystack'}
+            </button>
+          </div>
         </div>
       )}
     </main>

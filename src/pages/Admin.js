@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { addHeroSlide, deleteHeroSlide, loadHeroSlides, reorderHeroSlides, updateHeroSlide } from '../hero/heroService';
+import { addHeroSlide, deleteHeroSlide, reorderHeroSlides, updateHeroSlide } from '../hero/heroService';
+import useHeroSlides from '../hero/useHeroSlides';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useUserAuth } from '../auth/UserAuthContext';
-import { addProduct, loadProducts, deleteProduct } from '../products/productService';
-import { loadOrders } from '../orders/orderService';
+import { addProduct, deleteProduct } from '../products/productService';
+import useProducts from '../products/useProducts';
+import { getOrderEventName, loadOrders } from '../orders/orderService';
 import { addCategory, deleteCategory, formatCategoryLabel } from '../categories/categoryService';
 import useCategories from '../categories/useCategories';
+import { PRODUCT_FALLBACK_IMAGE, SLIDE_FALLBACK_IMAGE, resolveImageSource, resolveProductImage } from '../utils/images';
 
 const CHART_COLORS = ['#2f67dc', '#f59e0b', '#8b5cf6', '#0f766e', '#ec4899', '#22c55e', '#ef4444', '#94a3b8'];
 
 function Admin() {
   const [tab, setTab] = useState('dashboard');
-  const [slides, setSlides] = useState(() => loadHeroSlides());
   const [title, setTitle] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -22,7 +24,7 @@ function Admin() {
   const [toDate, setToDate] = useState('');
   const [q, setQ] = useState('');
   const [notice, setNotice] = useState('');
-  const [products, setProducts] = useState(() => loadProducts());
+  const [orders, setOrders] = useState([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [farmersMenuOpen, setFarmersMenuOpen] = useState(true);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
@@ -40,7 +42,8 @@ function Admin() {
   });
   const { sellers, approveSeller, rejectSeller, suspendSeller, deleteSeller } = useSellerAuth();
   const { users, updateUser, deleteUser, register, current } = useUserAuth();
-  const orders = useMemo(() => loadOrders(), []);
+  const slides = useHeroSlides();
+  const products = useProducts();
   const categories = useCategories();
   const farmers = sellers;
   const productsMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -58,8 +61,14 @@ function Admin() {
     if (nextTab.startsWith('settings-')) setSettingsMenuOpen(true);
   };
 
-  const refreshSlides = () => setSlides(loadHeroSlides());
-  const refreshProducts = () => setProducts(loadProducts());
+  useEffect(() => {
+    const sync = () => loadOrders().then(setOrders).catch(() => setOrders([]));
+    sync();
+    window.addEventListener(getOrderEventName(), sync);
+    return () => {
+      window.removeEventListener(getOrderEventName(), sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (!categories.length) return;
@@ -157,12 +166,11 @@ function Admin() {
     [rejectedFarmers, search]
   );
 
-  const addUrl = () => {
+  const addUrl = async () => {
     if (!imageUrl.trim()) return;
-    addHeroSlide({ title: title || 'Banner', image: imageUrl, cta: { text: 'Shop', href: '/' } });
+    await addHeroSlide({ title: title || 'Banner', image: imageUrl, cta: { text: 'Shop', href: '/' } });
     setTitle('');
     setImageUrl('');
-    refreshSlides();
     flash('Hero slide added');
   };
 
@@ -183,35 +191,31 @@ function Admin() {
 
   const uploadImages = async (files) => {
     const urls = await toDataUrls(files);
-    urls.forEach((url) => addHeroSlide({ title: title || 'Banner', image: url, cta: { text: 'Shop', href: '/' } }));
+    await Promise.all(urls.map((url) => addHeroSlide({ title: title || 'Banner', image: url, cta: { text: 'Shop', href: '/' } })));
     setTitle('');
-    refreshSlides();
     flash('Hero slides uploaded');
   };
 
-  const removeSlide = (id) => {
-    deleteHeroSlide(id);
-    refreshSlides();
+  const removeSlide = async (id) => {
+    await deleteHeroSlide(id);
     flash('Hero slide removed');
   };
 
-  const moveUp = (id) => {
+  const moveUp = async (id) => {
     const ids = slides.map((slide) => slide.id);
     const index = ids.indexOf(id);
     if (index > 0) {
       [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
-      reorderHeroSlides(ids);
-      refreshSlides();
+      await reorderHeroSlides(ids);
     }
   };
 
-  const moveDown = (id) => {
+  const moveDown = async (id) => {
     const ids = slides.map((slide) => slide.id);
     const index = ids.indexOf(id);
     if (index >= 0 && index < ids.length - 1) {
       [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]];
-      reorderHeroSlides(ids);
-      refreshSlides();
+      await reorderHeroSlides(ids);
     }
   };
 
@@ -221,11 +225,10 @@ function Admin() {
     setEditingImageUrl(slide.image || '');
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editingId) return;
-    updateHeroSlide(editingId, { title: editingTitle, image: editingImageUrl });
+    await updateHeroSlide(editingId, { title: editingTitle, image: editingImageUrl });
     setEditingId(null);
-    refreshSlides();
     flash('Hero slide updated');
   };
 
@@ -236,20 +239,19 @@ function Admin() {
     if (urls[0]) setEditingImageUrl(urls[0]);
   };
 
-  const removeProduct = (id) => {
-    deleteProduct(id);
-    refreshProducts();
+  const removeProduct = async (id) => {
+    await deleteProduct(id);
     flash('Product removed');
   };
 
-  const submitProduct = (e) => {
+  const submitProduct = async (e) => {
     e.preventDefault();
     const farmer = approvedFarmers.find((entry) => String(entry.id) === productForm.farmerId);
     if (!farmer) {
       flash('Select an approved farmer first');
       return;
     }
-    addProduct({
+    await addProduct({
       name: productForm.name,
       category: productForm.category,
       price: productForm.price,
@@ -260,7 +262,6 @@ function Admin() {
       images: productForm.imageUrl ? [productForm.imageUrl] : [],
       sellerId: farmer.id,
     });
-    refreshProducts();
     setProductForm({
       name: '',
       category: categories[0] || '',
@@ -275,10 +276,10 @@ function Admin() {
     flash(`Product added for ${farmer.name}`);
   };
 
-  const submitCategory = (e) => {
+  const submitCategory = async (e) => {
     e.preventDefault();
     try {
-      addCategory(categoryName);
+      await addCategory(categoryName);
       setCategoryName('');
       flash('Category created');
     } catch (err) {
@@ -501,7 +502,7 @@ function Admin() {
               <div className="Grid">
                 {slides.map((slide) => (
                   <div className="Card" key={slide.id}>
-                    <img src={slide.image} alt={slide.title} onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300?text=Slide'; }} />
+                    <img src={resolveImageSource(slide.image, SLIDE_FALLBACK_IMAGE, 'landscape_16_9')} alt={slide.title} onError={(e) => { e.currentTarget.src = SLIDE_FALLBACK_IMAGE; }} />
                     <div className="CardBody">
                       <h3>{slide.title}</h3>
                       <div className="AdminButtonRow">
@@ -557,7 +558,7 @@ function Admin() {
                           Role
                           <select value={user.role || 'buyer'} onChange={(e) => updateUser(user.id, { role: e.target.value })}>
                             <option value="buyer">Buyer</option>
-                            <option value="seller">Farmer</option>
+                            <option value="farmer">Farmer</option>
                             <option value="admin">Admin</option>
                           </select>
                         </label>
@@ -581,8 +582,8 @@ function Admin() {
             emptyText="No farmers waiting for review."
             actions={(farmer) => (
               <>
-                <button className="Btn" type="button" onClick={() => { approveSeller(farmer.id); goToTab('farmers-list'); flash(`${farmer.name} approved`); }}>Approve</button>
-                <button className="BtnDanger" type="button" onClick={() => { rejectSeller(farmer.id); goToTab('farmers-rejected'); flash(`${farmer.name} rejected`); }}>Reject</button>
+                <button className="Btn" type="button" onClick={async () => { await approveSeller(farmer.id); goToTab('farmers-list'); flash(`${farmer.name} approved`); }}>Approve</button>
+                <button className="BtnDanger" type="button" onClick={async () => { await rejectSeller(farmer.id); goToTab('farmers-rejected'); flash(`${farmer.name} rejected`); }}>Reject</button>
               </>
             )}
           />
@@ -598,8 +599,8 @@ function Admin() {
             emptyText="No approved farmers found."
             actions={(farmer) => (
               <>
-                <button className="BtnOutline" type="button" onClick={() => { suspendSeller(farmer.id); flash(`${farmer.name} suspended`); }}>Suspend</button>
-                <button className="BtnDanger" type="button" onClick={() => { rejectSeller(farmer.id); goToTab('farmers-rejected'); flash(`${farmer.name} moved to rejected`); }}>Reject</button>
+                <button className="BtnOutline" type="button" onClick={async () => { await suspendSeller(farmer.id); flash(`${farmer.name} suspended`); }}>Suspend</button>
+                <button className="BtnDanger" type="button" onClick={async () => { await rejectSeller(farmer.id); goToTab('farmers-rejected'); flash(`${farmer.name} moved to rejected`); }}>Reject</button>
               </>
             )}
           />
@@ -615,8 +616,8 @@ function Admin() {
             emptyText="No rejected farmers found."
             actions={(farmer) => (
               <>
-                <button className="Btn" type="button" onClick={() => { approveSeller(farmer.id); goToTab('farmers-list'); flash(`${farmer.name} restored`); }}>Approve</button>
-                <button className="BtnDanger" type="button" onClick={() => { deleteSeller(farmer.id); flash(`${farmer.name} removed`); }}>Delete</button>
+                <button className="Btn" type="button" onClick={async () => { await approveSeller(farmer.id); goToTab('farmers-list'); flash(`${farmer.name} restored`); }}>Approve</button>
+                <button className="BtnDanger" type="button" onClick={async () => { await deleteSeller(farmer.id); flash(`${farmer.name} removed`); }}>Delete</button>
               </>
             )}
           />
@@ -641,6 +642,8 @@ function Admin() {
                     </div>
                     <div className="OrderTotal">Status: {order.orderStatus || order.status || 'processing'}</div>
                     <div className="Muted">Items: {getOrderItems(order).length}</div>
+                    {order.neededBy && <div className="Muted">Needed by: {order.neededBy}</div>}
+                    {order.requestNote && <div className="Muted">Request: {order.requestNote}</div>}
                   </div>
                 ))}
               </div>
@@ -676,7 +679,7 @@ function Admin() {
                   const farmer = farmersMap.get(product.sellerId);
                   return (
                     <div className="Card" key={product.id}>
-                      <img src={product.image || (product.images && product.images[0]) || 'https://placehold.co/400x300?text=Product'} alt={product.name} onError={(e) => { e.currentTarget.src = 'https://placehold.co/400x300?text=Product'; }} />
+                      <img src={resolveProductImage(product)} alt={product.name} onError={(e) => { e.currentTarget.src = PRODUCT_FALLBACK_IMAGE; }} />
                       <div className="CardBody">
                         <h3>{product.name}</h3>
                         <p className="Muted">{product.category}</p>
@@ -759,7 +762,7 @@ function Admin() {
                             className="BtnDanger"
                             type="button"
                             disabled={(categoryCounts.get(category) || 0) > 0}
-                            onClick={() => { deleteCategory(category); flash(`${formatCategoryLabel(category)} removed`); }}
+                            onClick={async () => { await deleteCategory(category); flash(`${formatCategoryLabel(category)} removed`); }}
                           >
                             Delete
                           </button>
