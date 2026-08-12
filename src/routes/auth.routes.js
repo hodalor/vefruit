@@ -3,6 +3,7 @@ const express = require('express');
 const User = require('../models/User');
 const { hashPassword } = require('../utils/hash');
 const { serializeUser } = require('../utils/serializers');
+const { publishRealtimeEvent } = require('../utils/realtime');
 
 const router = express.Router();
 
@@ -14,12 +15,17 @@ function normalizePhone(value) {
   return String(value || '').replace(/\s+/g, '').trim();
 }
 
+function normalizeUsername(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 async function findByIdentifier(identifier, role) {
   const email = normalizeEmail(identifier);
   const phone = normalizePhone(identifier);
+  const username = normalizeUsername(identifier);
   return User.findOne({
     role,
-    $or: [{ email }, { phone }],
+    $or: [{ email }, { phone }, { username }],
   });
 }
 
@@ -51,7 +57,9 @@ router.post('/register-buyer', async (req, res) => {
     password: hashPassword(password),
   });
 
-  return res.status(201).json({ success: true, user: serializeUser(user) });
+  const serialized = serializeUser(user);
+  publishRealtimeEvent('user.changed', { userId: serialized.id, action: 'created' });
+  return res.status(201).json({ success: true, user: serialized });
 });
 
 router.post('/register-farmer', async (req, res) => {
@@ -79,7 +87,9 @@ router.post('/register-farmer', async (req, res) => {
     password: hashPassword(password),
   });
 
-  return res.status(201).json({ success: true, user: serializeUser(user) });
+  const serialized = serializeUser(user);
+  publishRealtimeEvent('farmer.changed', { farmerId: serialized.id, action: 'created' });
+  return res.status(201).json({ success: true, user: serialized });
 });
 
 router.post('/login-user', async (req, res) => {
@@ -95,7 +105,11 @@ router.post('/login-farmer', async (req, res) => {
   const { identifier, password } = req.body;
   const user = await User.findOne({
     role: 'farmer',
-    $or: [{ email: normalizeEmail(identifier) }, { phone: normalizePhone(identifier) }],
+    $or: [
+      { email: normalizeEmail(identifier) },
+      { phone: normalizePhone(identifier) },
+      { username: normalizeUsername(identifier) },
+    ],
   });
 
   if (!user || user.password !== hashPassword(password)) {

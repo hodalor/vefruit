@@ -2,6 +2,7 @@ const express = require('express');
 
 const User = require('../models/User');
 const { serializeUser } = require('../utils/serializers');
+const { publishRealtimeEvent } = require('../utils/realtime');
 
 const router = express.Router();
 
@@ -22,11 +23,14 @@ router.patch('/:id/status', async (req, res) => {
     { new: true }
   );
   if (!farmer) return res.status(404).json({ success: false, message: 'Farmer not found' });
-  res.json({ success: true, farmer: serializeUser(farmer) });
+  const serialized = serializeUser(farmer);
+  publishRealtimeEvent('farmer.changed', { farmerId: serialized.id, action: 'updated' });
+  res.json({ success: true, farmer: serialized });
 });
 
 router.delete('/:id', async (req, res) => {
   await User.findOneAndDelete({ _id: req.params.id, role: 'farmer' });
+  publishRealtimeEvent('farmer.changed', { farmerId: req.params.id, action: 'deleted' });
   res.json({ success: true });
 });
 

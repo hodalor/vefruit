@@ -3,6 +3,7 @@ function serializeUser(user) {
   return {
     id: String(obj._id || obj.id),
     name: obj.name || '',
+    username: obj.username || '',
     phone: obj.phone || '',
     email: obj.email || '',
     address: obj.address || '',
@@ -83,9 +84,45 @@ function serializeHeroSlide(slide) {
   };
 }
 
+function serializeChatMessage(message) {
+  const obj = message.toObject ? message.toObject() : message;
+  return {
+    id: String(obj._id || obj.id),
+    senderId: obj.senderId ? String(obj.senderId) : null,
+    senderRole: obj.senderRole || 'buyer',
+    recipientId: obj.recipientId ? String(obj.recipientId) : null,
+    recipientRole: obj.recipientRole || 'farmer',
+    productId: obj.productId ? String(obj.productId) : null,
+    body: obj.body || '',
+    createdAt: obj.createdAt,
+    updatedAt: obj.updatedAt,
+  };
+}
+
+function serializeProduceRequest(request) {
+  const obj = request.toObject ? request.toObject() : request;
+  return {
+    id: String(obj._id || obj.id),
+    buyerId: obj.buyerId ? String(obj.buyerId) : null,
+    buyerName: obj.buyerName || '',
+    buyerPhone: obj.buyerPhone || '',
+    desiredProduct: obj.desiredProduct || '',
+    category: obj.category || '',
+    quantity: obj.quantity || 0,
+    neededBy: obj.neededBy || '',
+    location: obj.location || '',
+    note: obj.note || '',
+    status: obj.status || 'open',
+    createdAt: obj.createdAt,
+    updatedAt: obj.updatedAt,
+  };
+}
+
 module.exports = {
   serializeUser,
   serializeProduct,
   serializeOrder,
   serializeHeroSlide,
+  serializeChatMessage,
+  serializeProduceRequest,
 };

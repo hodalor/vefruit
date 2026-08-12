@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
+    username: { type: String, trim: true, lowercase: true, default: '' },
     phone: { type: String, trim: true, default: '' },
     email: { type: String, trim: true, lowercase: true, default: '' },
     address: { type: String, trim: true, default: '' },

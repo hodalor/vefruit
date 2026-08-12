@@ -3,6 +3,7 @@ const express = require('express');
 const Order = require('../models/Order');
 const Product = require('../models/Product');
 const { serializeOrder } = require('../utils/serializers');
+const { publishRealtimeEvent } = require('../utils/realtime');
 
 const router = express.Router();
 
@@ -51,7 +52,10 @@ router.post('/', async (req, res) => {
     paystackReference: paystackReference || '',
   });
 
-  res.status(201).json({ success: true, order: serializeOrder(order) });
+  const serialized = serializeOrder(order);
+  publishRealtimeEvent('order.changed', { orderId: serialized.id, action: 'created' });
+  publishRealtimeEvent('product.changed', { action: 'inventory-updated' });
+  res.status(201).json({ success: true, order: serialized });
 });
 
 router.patch('/:id/status', async (req, res) => {
@@ -61,7 +65,9 @@ router.patch('/:id/status', async (req, res) => {
     { new: true }
   );
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-  res.json({ success: true, order: serializeOrder(order) });
+  const serialized = serializeOrder(order);
+  publishRealtimeEvent('order.changed', { orderId: serialized.id, action: 'updated' });
+  res.json({ success: true, order: serialized });
 });
 
 module.exports = router;
