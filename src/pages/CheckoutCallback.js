@@ -6,7 +6,7 @@ import { useToast } from '../toast/ToastContext';
 
 const PENDING_CHECKOUT_KEY = 'vefruit_pending_checkout_v1';
 const PENDING_CHECKOUT_FALLBACK_KEY = 'vefruit_pending_checkout_fallback_v1';
-const MAX_CONFIRM_ATTEMPTS = 8;
+const MAX_CONFIRM_ATTEMPTS = 15;
 const RETRY_DELAY_MS = 3000;
 
 function wait(ms) {
@@ -15,6 +15,10 @@ function wait(ms) {
 
 function isPendingConfirmation(error) {
   return error?.status === 409 || /pending/i.test(String(error?.message || ''));
+}
+
+function isFinalizeBusy(error) {
+  return /already in progress/i.test(String(error?.message || ''));
 }
 
 function CheckoutCallback() {
@@ -55,6 +59,9 @@ function CheckoutCallback() {
           return;
         } catch (err) {
           if (isPendingConfirmation(err) && attempt < MAX_CONFIRM_ATTEMPTS) {
+            if (!cancelled && isFinalizeBusy(err)) {
+              setStatus(`We found your payment. Finalizing your order safely... (${attempt}/${MAX_CONFIRM_ATTEMPTS})`);
+            }
             await wait(RETRY_DELAY_MS);
             continue;
           }
