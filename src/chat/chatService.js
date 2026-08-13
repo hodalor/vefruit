@@ -12,6 +12,7 @@ export async function loadChatMessages(params = {}) {
   if (params.otherUserId) query.set('otherUserId', params.otherUserId);
   if (params.productId) query.set('productId', params.productId);
   if (params.threadKey) query.set('threadKey', params.threadKey);
+  if (params.join) query.set('join', 'true');
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const data = await api.get(`/chats${suffix}`);
   return data.messages || [];

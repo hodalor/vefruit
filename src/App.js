@@ -4,17 +4,18 @@ import Home from './pages/Home';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import CheckoutCallback from './pages/CheckoutCallback';
-import Orders from './pages/Orders';
 import BuyerDashboard from './pages/BuyerDashboard';
-import SellerRegister from './pages/SellerRegister';
-import SellerLogin from './pages/SellerLogin';
+import BuyerOrders from './pages/BuyerOrders';
+import BuyerPayments from './pages/BuyerPayments';
+import BuyerPurchaseHistory from './pages/BuyerPurchaseHistory';
+import BuyerProfile from './pages/BuyerProfile';
+import PublicProfile from './pages/PublicProfile';
 import SellerDashboard from './pages/SellerDashboard';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import HeaderBar from './components/HeaderBar';
 import Admin from './pages/Admin';
 import ProductDetail from './pages/ProductDetail';
-import AdminLogin from './pages/AdminLogin';
 import Messages from './pages/Messages';
 import ProductRequests from './pages/ProductRequests';
 import useRealtimeBridge from './realtime/useRealtimeBridge';
@@ -33,17 +34,22 @@ function App() {
         <Route path="/checkout" element={<BuyerRoute><Checkout /></BuyerRoute>} />
         <Route path="/checkout/callback" element={<CheckoutCallback />} />
         <Route path="/buyer/dashboard" element={<BuyerRoute><BuyerDashboard /></BuyerRoute>} />
-        <Route path="/orders" element={<BuyerRoute><Orders /></BuyerRoute>} />
+        <Route path="/buyer/orders" element={<BuyerRoute><BuyerOrders /></BuyerRoute>} />
+        <Route path="/buyer/payments" element={<BuyerRoute><BuyerPayments /></BuyerRoute>} />
+        <Route path="/buyer/purchase-history" element={<BuyerRoute><BuyerPurchaseHistory /></BuyerRoute>} />
+        <Route path="/buyer/profile" element={<BuyerRoute><BuyerProfile /></BuyerRoute>} />
+        <Route path="/profiles/:role/:id" element={<PublicProfile />} />
+        <Route path="/orders" element={<Navigate to="/buyer/orders" replace />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/requests" element={<ProductRequests />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/seller/register" element={<SellerRegister />} />
-        <Route path="/seller/login" element={<SellerLogin />} />
+        <Route path="/seller/register" element={<Navigate to="/register?role=seller" replace />} />
+        <Route path="/seller/login" element={<Navigate to="/login" replace />} />
         <Route path="/seller/dashboard" element={<FarmerRoute><SellerDashboard /></FarmerRoute>} />
         <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
-        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/login" element={<Navigate to="/login" replace />} />
       </Routes>
       <footer className="Footer">
         <small>© {new Date().getFullYear()} veFruit</small>
@@ -66,7 +72,7 @@ function BuyerRoute({ children }) {
 function FarmerRoute({ children }) {
   const { current } = useSellerAuth();
   if (!current) {
-    return <Navigate to="/seller/login" replace />;
+    return <Navigate to="/login" replace />;
   }
   return children;
 }
@@ -74,7 +80,7 @@ function FarmerRoute({ children }) {
 function AdminRoute({ children }) {
   const { current } = useUserAuth();
   if (!current || current.role !== 'admin') {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/login" replace />;
   }
   return children;
 }

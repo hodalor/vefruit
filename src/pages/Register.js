@@ -49,7 +49,7 @@ function Register() {
       } else {
         await register(form);
         showToast('Account created successfully.');
-        navigate('/');
+        navigate('/buyer/dashboard');
       }
     } catch (err) {
       setError(err.message || 'Registration failed');
@@ -64,6 +64,23 @@ function Register() {
       <div className="Card AuthCard">
         <div className="CardBody">
           <h2 className="AuthTitle">Register</h2>
+          <p className="AuthSubtle">Choose the account type below and complete the form that matches how you want to use veFruit.</p>
+          <div className="AuthTypeTabs">
+            <button
+              className={`BtnOutline ${form.role === 'buyer' ? 'AuthTypeTabActive' : ''}`}
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, role: 'buyer' }))}
+            >
+              Buyer
+            </button>
+            <button
+              className={`BtnOutline ${form.role === 'seller' ? 'AuthTypeTabActive' : ''}`}
+              type="button"
+              onClick={() => setForm((prev) => ({ ...prev, role: 'seller' }))}
+            >
+              Farmer
+            </button>
+          </div>
           {error && <p style={{ color: 'crimson' }}>{error}</p>}
           <form onSubmit={submit} className="Form AuthGridForm">
             <div className="AuthSectionLabel AuthFieldWide">Personal Details</div>
@@ -94,13 +111,6 @@ function Register() {
             <label>
               ID Number
               <input value={form.idNumber} onChange={(e) => setForm({ ...form, idNumber: e.target.value })} />
-            </label>
-            <label>
-              Role
-              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                <option value="buyer">Buyer</option>
-                <option value="seller">Farmer</option>
-              </select>
             </label>
             {form.role === 'seller' && (
               <>

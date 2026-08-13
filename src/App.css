@@ -141,6 +141,612 @@ input[type="file"] {
   justify-content: flex-end;
 }
 
+.BuyerShell {
+  min-height: calc(100vh - 72px);
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.BuyerSidebar {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+  border-radius: 24px;
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  position: sticky;
+  top: 1rem;
+  height: fit-content;
+}
+
+.BuyerSidebarBrand h3 {
+  margin: 0;
+}
+
+.BuyerSidebarBrand p {
+  margin: 0.4rem 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  line-height: 1.6;
+}
+
+.BuyerSidebarMenu {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.BuyerSidebarLink {
+  display: block;
+  text-decoration: none;
+  color: #fff;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  font-weight: 700;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.BuyerSidebarLink:hover,
+.BuyerSidebarLink.active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateX(2px);
+}
+
+.BuyerSidebarNote {
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  line-height: 1.5;
+}
+
+.BuyerMain {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.BuyerHeading h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+}
+
+.BuyerTable td,
+.BuyerTable th {
+  vertical-align: middle;
+}
+
+.BuyerTableRow {
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.BuyerTableRow:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: -3px;
+}
+
+.BuyerDetailList {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.BuyerDetailRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.BuyerProfileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.BuyerDetailCard {
+  padding: 1rem;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.PublicProfileHero {
+  border-radius: 24px;
+}
+
+.PublicProfileHeroTop {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.PublicProfileAvatar {
+  width: 82px;
+  height: 82px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #16a34a, #0f766e);
+  box-shadow: 0 14px 30px rgba(22, 163, 74, 0.18);
+}
+
+.PublicProfileEyebrow {
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+  margin-bottom: 0.35rem;
+}
+
+.PublicProfileTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.65rem;
+}
+
+.PublicProfileSection {
+  margin-top: 1rem;
+}
+
+.PublicProfileGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.PublicProfileWide {
+  grid-column: 1 / -1;
+}
+
+.PublicProfileList {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.PublicProfileListCard {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.PublicProfileListCard:hover {
+  transform: translateY(-1px);
+  border-color: #bfd7c8;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+}
+
+.PublicProfileListCard span {
+  color: #64748b;
+}
+
+.PublicProfileDetailList {
+  display: grid;
+  gap: 0.85rem;
+  color: #334155;
+}
+
+.PublicReviewForm {
+  display: grid;
+  gap: 0.85rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.PublicReviewForm label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.PublicStarSelector {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.55rem;
+}
+
+.PublicStarButton {
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-size: 2rem;
+  line-height: 1;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.PublicStarButton:hover,
+.PublicStarButton.active {
+  color: #facc15;
+  transform: scale(1.06);
+}
+
+.ChatShell {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
+  min-height: 78vh;
+  border: 1px solid #dbe5dd;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #eef7f0;
+}
+
+.ChatShellClean {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.ChatSidebar {
+  background: linear-gradient(180deg, #f7fffa 0%, #edf7f0 100%);
+  border-right: 1px solid #dbe5dd;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+  position: relative;
+}
+
+.ChatSidebarHeader {
+  padding: 1rem 1rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.8);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.ChatConversationList {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.9rem;
+  overflow-y: auto;
+  align-content: start;
+}
+
+.ChatConversationCard {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.9rem;
+  border-radius: 18px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #dbe5dd;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ChatConversationCard:hover,
+.ChatConversationCard.active {
+  transform: translateY(-1px);
+  border-color: #8fd3a8;
+  box-shadow: 0 14px 28px rgba(22, 163, 74, 0.12);
+}
+
+.ChatConversationAvatar,
+.ChatHeaderAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #16a34a, #0f766e);
+}
+
+.ChatConversationContent,
+.ChatHeaderContent {
+  min-width: 0;
+}
+
+.ChatConversationTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.ChatConversationTop strong,
+.ChatConversationTop span {
+  white-space: nowrap;
+}
+
+.ChatConversationTop span {
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.ChatConversationPreview {
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ChatMain {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background:
+    radial-gradient(circle at top left, rgba(22, 163, 74, 0.08), transparent 28%),
+    radial-gradient(circle at bottom right, rgba(15, 118, 110, 0.08), transparent 24%),
+    #efeae2;
+  min-height: 0;
+}
+
+.ChatHeader {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.9rem;
+  align-items: center;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.ChatHeaderMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.85rem;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.ChatMessages {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.1rem 1.2rem;
+  overflow-y: auto;
+  align-content: start;
+  min-height: 0;
+}
+
+.ChatBubbleRow {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.ChatBubbleRow.mine {
+  justify-content: flex-end;
+}
+
+.ChatBubble {
+  max-width: min(72%, 720px);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 18px 18px 18px 6px;
+  padding: 0.8rem 0.95rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.ChatBubble.mine {
+  background: #dcf8c6;
+  border-color: #c8ebb2;
+  border-radius: 18px 18px 6px 18px;
+}
+
+.ChatBubbleSender {
+  margin-bottom: 0.35rem;
+  color: #64748b;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.ChatBubbleBody {
+  color: #0f172a;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ChatBubbleTime {
+  margin-top: 0.45rem;
+  text-align: right;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.ChatComposer {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem 1.2rem 1.1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+}
+
+.ChatComposerField {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.ChatComposerLabel {
+  color: #334155;
+  font-weight: 700;
+}
+
+.ChatComposer textarea {
+  min-height: 74px;
+  border-radius: 18px;
+  background: #fff;
+}
+
+.ChatComposerActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ChatWelcome,
+.ChatEmptyState {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  padding: 2rem 1.25rem;
+}
+
+.ChatInfoPanel {
+  background: linear-gradient(180deg, #f9fffb 0%, #eef7f0 100%);
+  border-left: 1px solid #dbe5dd;
+  min-height: 0;
+}
+
+.ChatInfoScroll {
+  height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+}
+
+.ChatInfoCard {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #dbe5dd;
+  border-radius: 20px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.55rem;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.04);
+}
+
+.ChatInfoCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.ChatInfoCardHeader h3 {
+  margin: 0;
+}
+
+.ChatInfoMeta {
+  color: #475569;
+  line-height: 1.5;
+}
+
+.ChatProfileName {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ChatProductList,
+.ChatReviewList {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ChatProductCard {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.ChatProductCard span {
+  color: #64748b;
+}
+
+.ChatReviewForm {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ChatReviewForm label {
+  display: grid;
+  gap: 0.35rem;
+  color: #334155;
+  font-weight: 700;
+}
+
+.ChatReviewCard {
+  padding: 0.8rem 0.9rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.ChatReviewHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.ChatReviewBody {
+  color: #334155;
+  line-height: 1.5;
+}
+
+.ChatReviewTime,
+.ChatRatingSummary {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.VerifiedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
 .Muted {
   color: #64748b;
   margin: 0.25rem 0 0.5rem 0;
@@ -158,7 +764,14 @@ input[type="file"] {
   border-top: 1px solid #e2e8f0;
 }
 
-.HeaderBar { border-bottom: 1px solid #e2e8f0; background: #fff; }
+.HeaderBar {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  border-bottom: 1px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+}
 .HeaderInner {
   max-width: 1100px;
   margin: 0 auto;
@@ -381,6 +994,19 @@ input[type="file"] {
 }
 .FormActions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .AuthTitle { margin: 0 0 0.75rem 0; text-align: center; }
+.AuthSubtle { margin: 0 0 1rem 0; text-align: center; color: #64748b; }
+.AuthTypeTabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.AuthTypeTabActive {
+  border-color: #16a34a;
+  color: #166534;
+  background: #dcfce7;
+}
 
 .CartList { display: grid; gap: 0.75rem; }
 .CartItem { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 8px; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; }
@@ -417,8 +1043,37 @@ input[type="file"] {
 .Thumb { display: grid; gap: 0.25rem; justify-items: center; }
 .Thumb img { width: 80px; height: 80px; object-fit: cover; border: 1px solid #e2e8f0; border-radius: 8px; }
 
-.EditOverlay { position: fixed; inset: 0; background: rgba(2,6,23,0.4); display: grid; place-items: center; z-index: 50; }
-.EditModal { max-width: 800px; width: calc(100% - 2rem); }
+.EditOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2,6,23,0.4);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 1rem;
+}
+
+.EditModal {
+  max-width: 800px;
+  width: min(100%, calc(100vw - 2rem));
+}
+
+.OrderDetailModal {
+  height: min(80vh, 760px);
+  max-height: min(80vh, 760px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.OrderDetailModal .CardBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.85rem;
+  scrollbar-gutter: stable;
+}
 
 /* Line chart */
 .Chart { display: grid; gap: 0.5rem; }
@@ -1224,6 +1879,9 @@ input[type="file"] {
   .AdminChartGridPrimary,
   .AdminPerformanceGrid,
   .BuyerDashboardGrid,
+  .BuyerProfileGrid,
+  .PublicProfileGrid,
+  .ChatShell,
   .AdminSearchGrid,
   .AdminOrdersGrid,
   .AdminOrderItemsGrid,
@@ -1233,5 +1891,41 @@ input[type="file"] {
   .FarmerDetailGrid,
   .FarmerResetRow {
     grid-template-columns: 1fr;
+  }
+
+  .BuyerShell {
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .BuyerSidebar {
+    position: static;
+  }
+
+  .BuyerDetailRow {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .PublicProfileHeroTop {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ChatShell {
+    min-height: auto;
+  }
+
+  .ChatMain {
+    min-height: 70vh;
+  }
+
+  .ChatInfoPanel {
+    border-left: none;
+    border-top: 1px solid #dbe5dd;
+  }
+
+  .ChatBubble {
+    max-width: 90%;
   }
 }

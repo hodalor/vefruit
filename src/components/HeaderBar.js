@@ -8,6 +8,7 @@ function HeaderBar() {
   const { items } = useCart();
   const { current, logout } = useUserAuth();
   const { current: sellerCurrent, logout: sellerLogout } = useSellerAuth();
+  const activeAccount = sellerCurrent || current;
   const cartCount = items.reduce((sum, i) => sum + i.qty, 0);
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -46,7 +47,7 @@ function HeaderBar() {
   const handleFarmerLogout = () => {
     sellerLogout();
     setOpen(false);
-    navigate('/seller/login', { replace: true });
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -73,34 +74,32 @@ function HeaderBar() {
             </button>
             {open && (
               <div className="Dropdown">
-                {current ? (
+                {activeAccount ? (
                   <>
-                    {current.role === 'buyer' && (
+                    {current?.role === 'buyer' && (
                       <>
                         <Link className="DropdownItem" to="/buyer/dashboard" onClick={() => setOpen(false)}>Buyer Dashboard</Link>
-                        <Link className="DropdownItem" to="/orders" onClick={() => setOpen(false)}>My Orders</Link>
+                        <Link className="DropdownItem" to="/buyer/orders" onClick={() => setOpen(false)}>My Orders</Link>
+                        <Link className="DropdownItem" to="/buyer/payments" onClick={() => setOpen(false)}>Payments</Link>
+                        <Link className="DropdownItem" to="/buyer/profile" onClick={() => setOpen(false)}>Profile</Link>
                       </>
                     )}
-                    {current.role === 'admin' && (
+                    {current?.role === 'admin' && (
                       <Link className="DropdownItem" to="/admin" onClick={() => setOpen(false)}>Admin Dashboard</Link>
                     )}
-                    <button className="DropdownItem" onClick={handleBuyerLogout}>Logout</button>
+                    {sellerCurrent && (
+                      <Link className="DropdownItem" to="/seller/dashboard" onClick={() => setOpen(false)}>Farmer Dashboard</Link>
+                    )}
+                    {sellerCurrent ? (
+                      <button className="DropdownItem" onClick={handleFarmerLogout}>Logout</button>
+                    ) : (
+                      <button className="DropdownItem" onClick={handleBuyerLogout}>Logout</button>
+                    )}
                   </>
                 ) : (
                   <>
-                    <Link className="DropdownItem" to="/login" onClick={() => setOpen(false)}>Buyer Login</Link>
-                    <Link className="DropdownItem" to="/register?role=buyer" onClick={() => setOpen(false)}>Buyer Register</Link>
-                  </>
-                )}
-                {sellerCurrent ? (
-                  <>
-                    <Link className="DropdownItem" to="/seller/dashboard" onClick={() => setOpen(false)}>Farmer Dashboard</Link>
-                    <button className="DropdownItem" onClick={handleFarmerLogout}>Logout Farmer</button>
-                  </>
-                ) : (
-                  <>
-                    <Link className="DropdownItem" to="/seller/login" onClick={() => setOpen(false)}>Farmer Login</Link>
-                    <Link className="DropdownItem" to="/seller/register" onClick={() => setOpen(false)}>Farmer Register</Link>
+                    <Link className="DropdownItem" to="/login" onClick={() => setOpen(false)}>Login</Link>
+                    <Link className="DropdownItem" to="/register" onClick={() => setOpen(false)}>Register</Link>
                   </>
                 )}
               </div>

@@ -93,6 +93,13 @@ export function UserAuthProvider({ children }) {
     return user;
   };
 
+  const setAuthenticatedUser = (user) => {
+    setCurrent(user || null);
+    if (user) {
+      setUsers((prev) => [user, ...prev.filter((entry) => entry.id !== user.id)]);
+    }
+  };
+
   const logout = () => setCurrent(null);
 
   const updateUser = (id, patch) => {
@@ -111,7 +118,7 @@ export function UserAuthProvider({ children }) {
     });
   };
 
-  const value = { users, current, register, login, logout, updateUser, deleteUser };
+  const value = { users, current, register, login, logout, updateUser, deleteUser, setAuthenticatedUser };
   return <UserAuthContext.Provider value={value}>{children}</UserAuthContext.Provider>;
 }
 

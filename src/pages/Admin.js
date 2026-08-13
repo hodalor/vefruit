@@ -678,6 +678,7 @@ function Admin() {
                           <h3>{user.name}</h3>
                           <div className="AdminPillRow">
                             <span className="AdminPill">{capitalize(user.accountType)}</span>
+                            {user.isVerified && <span className="AdminPill">Verified</span>}
                             {user.accountType === 'farmer' && <span className="AdminPill">{capitalize(getFarmerStatus(user))}</span>}
                           </div>
                           {user.username && <p className="Muted">@{user.username}</p>}
@@ -690,33 +691,69 @@ function Admin() {
                           </div>
                           <div className="AdminButtonRow">
                             {user.accountType === 'buyer' ? (
-                              <LoadingButton
-                                className="BtnDanger"
-                                type="button"
-                                loading={isActionLoading(`buyer-delete-${user.id}`)}
-                                loadingText="Removing..."
-                                onClick={() => runAction(
-                                  `buyer-delete-${user.id}`,
-                                  () => deleteUser(user.id),
-                                  {
-                                    successMessage: 'Buyer removed.',
-                                    errorMessage: 'Failed to remove buyer.',
-                                  }
-                                )}
-                              >
-                                Remove Buyer
-                              </LoadingButton>
+                              <>
+                                <LoadingButton
+                                  className="BtnOutline"
+                                  type="button"
+                                  loading={isActionLoading(`buyer-verify-${user.id}`)}
+                                  loadingText="Saving..."
+                                  onClick={() => runAction(
+                                    `buyer-verify-${user.id}`,
+                                    () => updateUser(user.id, { isVerified: !user.isVerified }),
+                                    {
+                                      successMessage: user.isVerified ? 'Buyer verification removed.' : 'Buyer marked as verified.',
+                                      errorMessage: 'Failed to update buyer verification.',
+                                    }
+                                  )}
+                                >
+                                  {user.isVerified ? 'Remove Verification' : 'Mark Verified'}
+                                </LoadingButton>
+                                <LoadingButton
+                                  className="BtnDanger"
+                                  type="button"
+                                  loading={isActionLoading(`buyer-delete-${user.id}`)}
+                                  loadingText="Removing..."
+                                  onClick={() => runAction(
+                                    `buyer-delete-${user.id}`,
+                                    () => deleteUser(user.id),
+                                    {
+                                      successMessage: 'Buyer removed.',
+                                      errorMessage: 'Failed to remove buyer.',
+                                    }
+                                  )}
+                                >
+                                  Remove Buyer
+                                </LoadingButton>
+                              </>
                             ) : (
-                              <button
-                                className="BtnOutline"
-                                type="button"
-                                onClick={() => {
-                                  goToTab(getFarmerStatus(user) === 'approved' ? 'farmers-list' : getFarmerStatus(user) === 'pending' ? 'farmers-review' : 'farmers-rejected');
-                                  openFarmerDetails(user);
-                                }}
-                              >
-                                Open Farmer Record
-                              </button>
+                              <>
+                                <LoadingButton
+                                  className="BtnOutline"
+                                  type="button"
+                                  loading={isActionLoading(`farmer-verify-${user.id}`)}
+                                  loadingText="Saving..."
+                                  onClick={() => runAction(
+                                    `farmer-verify-${user.id}`,
+                                    () => updateUser(user.id, { isVerified: !user.isVerified }),
+                                    {
+                                      successMessage: user.isVerified ? 'Farmer verification removed.' : 'Farmer marked as verified.',
+                                      errorMessage: 'Failed to update farmer verification.',
+                                    }
+                                  )}
+                                >
+                                  {user.isVerified ? 'Remove Verification' : 'Mark Verified'}
+                                </LoadingButton>
+                                <button
+                                  className="BtnOutline"
+                                  type="button"
+                                  onClick={() => {
+                                    goToTab(getFarmerStatus(user) === 'approved' ? 'farmers-list' : getFarmerStatus(user) === 'pending' ? 'farmers-review' : 'farmers-rejected');
+                                    openFarmerDetails(user);
+                                  }}
+                                >
+                                  Open Farmer Record
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -1121,6 +1158,14 @@ function Admin() {
           farmer={selectedFarmer}
           onClose={closeFarmerDetails}
           isActionLoading={isActionLoading}
+          onToggleVerified={() => runAction(
+            `farmer-verify-${selectedFarmer.id}`,
+            () => updateUser(selectedFarmer.id, { isVerified: !selectedFarmer.isVerified }),
+            {
+              successMessage: selectedFarmer.isVerified ? 'Farmer verification removed.' : 'Farmer marked as verified.',
+              errorMessage: 'Failed to update farmer verification.',
+            }
+          )}
           onApprove={() => runAction(
             `approve-farmer-${selectedFarmer.id}`,
             async () => {
@@ -1678,6 +1723,7 @@ function FarmerSection({
 function FarmerDetailModal({
   farmer,
   onClose,
+  onToggleVerified,
   onApprove,
   onDisable,
   onReject,
@@ -1706,6 +1752,7 @@ function FarmerDetailModal({
 
           <div className="AdminPillRow" style={{ marginTop: 0 }}>
             <span className="AdminPill">{capitalize(status)}</span>
+            {farmer.isVerified && <span className="AdminPill">Verified</span>}
             <span className="AdminPill">{farmer.email || 'No email'}</span>
             <span className="AdminPill">{farmer.phone || 'No phone'}</span>
           </div>
@@ -1724,10 +1771,19 @@ function FarmerDetailModal({
           <div className="AdminSectionHeader" style={{ marginTop: '1rem' }}>
             <div>
               <h4 style={{ margin: 0 }}>Account Actions</h4>
-              <p className="AdminSubtle">Approve, disable, enable again, reject, or permanently remove the farmer account.</p>
+              <p className="AdminSubtle">Approve, verify, disable, enable again, reject, or permanently remove the farmer account.</p>
             </div>
           </div>
           <div className="AdminButtonRow">
+            <LoadingButton
+              className="BtnOutline"
+              type="button"
+              loading={isActionLoading(`farmer-verify-${farmer.id}`)}
+              loadingText="Saving..."
+              onClick={onToggleVerified}
+            >
+              {farmer.isVerified ? 'Remove Verification' : 'Mark Verified'}
+            </LoadingButton>
             {canApprove && (
               <LoadingButton className="Btn" type="button" loading={isActionLoading(`approve-farmer-${farmer.id}`)} loadingText="Saving..." onClick={onApprove}>
                 {status === 'pending' ? 'Approve Account' : 'Enable Account'}
@@ -1786,7 +1842,7 @@ function OrderDetailModal({ order, productsMap, farmersMap, usersMap, onClose })
 
   return (
     <div className="EditOverlay">
-      <div className="EditModal Card AdminModalMedium">
+      <div className="EditModal Card AdminModalMedium OrderDetailModal">
         <div className="CardBody">
           <div className="AdminSectionHeader">
             <div>
@@ -1811,6 +1867,14 @@ function OrderDetailModal({ order, productsMap, farmersMap, usersMap, onClose })
             <InfoBlock label="Paystack Reference" value={order.paystackReference} />
             <InfoBlock label="Payment Status" value={order.paymentStatus} />
             <InfoBlock label="Delivery Note" value={order.requestNote} />
+          </div>
+
+          <div className="AdminButtonRow" style={{ marginTop: '1rem' }}>
+            {order.buyerId ? (
+              <Link className="BtnOutline" to={`/profiles/buyer/${encodeURIComponent(order.buyerId)}`}>
+                View Buyer Profile
+              </Link>
+            ) : null}
           </div>
 
           <div className="AdminPillRow">
@@ -1847,11 +1911,23 @@ function OrderDetailModal({ order, productsMap, farmersMap, usersMap, onClose })
                       <div><strong>Farmer:</strong> {farmer?.name || 'No farmer'}</div>
                       {product?.category && <div><strong>Category:</strong> {product.category}</div>}
                     </div>
-                    {item.sellerId && (
-                      <Link to={`/messages?buyerId=${encodeURIComponent(order.buyerId)}&farmerId=${encodeURIComponent(item.sellerId)}&productId=${encodeURIComponent(item.productId || item.id)}`}>
-                        Open Chat
-                      </Link>
-                    )}
+                    <div className="AdminButtonRow">
+                      {item.productId ? (
+                        <Link className="BtnOutline" to={`/product/${encodeURIComponent(item.productId || item.id)}`}>
+                          Open Product
+                        </Link>
+                      ) : null}
+                      {item.sellerId ? (
+                        <Link className="BtnOutline" to={`/profiles/farmer/${encodeURIComponent(item.sellerId)}`}>
+                          View Farmer Profile
+                        </Link>
+                      ) : null}
+                      {item.sellerId && (
+                        <Link to={`/messages?buyerId=${encodeURIComponent(order.buyerId)}&farmerId=${encodeURIComponent(item.sellerId)}&productId=${encodeURIComponent(item.productId || item.id)}`}>
+                          Open Chat
+                        </Link>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

@@ -101,6 +101,13 @@ export function SellerAuthProvider({ children }) {
     });
   };
 
+  const setAuthenticatedSeller = (seller) => {
+    setCurrent(seller || null);
+    if (seller) {
+      setSellers((prev) => [seller, ...prev.filter((entry) => entry.id !== seller.id)]);
+    }
+  };
+
   const logout = () => setCurrent(null);
 
   const updateSellerStatus = (id, status) => {
@@ -154,6 +161,7 @@ export function SellerAuthProvider({ children }) {
     updateSeller,
     resetSellerPassword,
     deleteSeller,
+    setAuthenticatedSeller,
   };
   return <SellerAuthContext.Provider value={value}>{children}</SellerAuthContext.Provider>;
 }
