@@ -7,6 +7,8 @@ const chatMessageSchema = new mongoose.Schema(
     recipientId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     recipientRole: { type: String, trim: true, default: 'farmer' },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+    threadKey: { type: String, trim: true, default: '' },
+    participantIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     body: { type: String, required: true, trim: true },
   },
   { timestamps: true }

@@ -2,10 +2,28 @@ const express = require('express');
 
 const Order = require('../models/Order');
 const Product = require('../models/Product');
+const User = require('../models/User');
 const { serializeOrder } = require('../utils/serializers');
 const { publishRealtimeEvent } = require('../utils/realtime');
 
 const router = express.Router();
+
+function normalizeOrderStatus(status) {
+  const next = String(status || '').trim().toLowerCase();
+  if (next === 'packed') return 'packaged';
+  if (next === 'shipped') return 'sent-for-delivery';
+  return next || 'processing';
+}
+
+async function findApprovedFarmer(id) {
+  if (!id) return null;
+  return User.findOne({
+    _id: id,
+    role: 'farmer',
+    approved: true,
+    status: 'approved',
+  });
+}
 
 router.get('/', async (req, res) => {
   const query = {};
@@ -32,6 +50,10 @@ router.post('/', async (req, res) => {
   for (const item of items) {
     const product = await Product.findById(item.productId);
     if (!product) return res.status(404).json({ success: false, message: 'One or more products were not found' });
+    const farmer = await findApprovedFarmer(product.sellerId);
+    if (!farmer) {
+      return res.status(403).json({ success: false, message: 'Only approved farmers can receive orders' });
+    }
     const requestedQty = Number(item.quantity || item.qty || 0);
     if (requestedQty < 1) {
       return res.status(400).json({ success: false, message: 'Each item quantity must be at least 1' });
@@ -53,7 +75,7 @@ router.post('/', async (req, res) => {
     items: normalizedItems,
     totalAmount: Number(totalAmount) || 0,
     paymentStatus: paymentStatus || 'pending',
-    orderStatus: orderStatus || 'processing',
+    orderStatus: normalizeOrderStatus(orderStatus),
     neededBy: neededBy || '',
     requestNote: requestNote || '',
     paystackReference: paystackReference || '',
@@ -66,9 +88,10 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id/status', async (req, res) => {
+  const nextStatus = normalizeOrderStatus(req.body.status);
   const order = await Order.findByIdAndUpdate(
     req.params.id,
-    { orderStatus: req.body.status, updatedAt: new Date().toISOString() },
+    { orderStatus: nextStatus, updatedAt: new Date().toISOString() },
     { new: true }
   );
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });

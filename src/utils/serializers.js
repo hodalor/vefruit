@@ -1,3 +1,10 @@
+function normalizeOrderStatus(status) {
+  const next = String(status || '').trim().toLowerCase();
+  if (next === 'packed') return 'packaged';
+  if (next === 'shipped') return 'sent-for-delivery';
+  return next || 'processing';
+}
+
 function serializeUser(user) {
   const obj = user.toObject ? user.toObject() : user;
   return {
@@ -64,7 +71,7 @@ function serializeOrder(order) {
     })),
     totalAmount: obj.totalAmount || 0,
     paymentStatus: obj.paymentStatus || 'pending',
-    orderStatus: obj.orderStatus || 'processing',
+    orderStatus: normalizeOrderStatus(obj.orderStatus),
     createdAt: obj.createdAt,
     updatedAt: obj.updatedAt,
     neededBy: obj.neededBy || '',
@@ -93,6 +100,8 @@ function serializeChatMessage(message) {
     recipientId: obj.recipientId ? String(obj.recipientId) : null,
     recipientRole: obj.recipientRole || 'farmer',
     productId: obj.productId ? String(obj.productId) : null,
+    threadKey: obj.threadKey || '',
+    participantIds: Array.isArray(obj.participantIds) ? obj.participantIds.map((id) => String(id)) : [],
     body: obj.body || '',
     createdAt: obj.createdAt,
     updatedAt: obj.updatedAt,

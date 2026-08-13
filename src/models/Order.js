@@ -20,8 +20,19 @@ const orderSchema = new mongoose.Schema(
     neededBy: { type: String, default: '' },
     requestNote: { type: String, default: '' },
     paystackReference: { type: String, default: '' },
+    finalizationStatus: { type: String, default: 'complete' },
   },
   { timestamps: true }
+);
+
+orderSchema.index(
+  { paystackReference: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      paystackReference: { $type: 'string', $gt: '' },
+    },
+  }
 );
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -17,6 +17,16 @@ async function connectToDatabase() {
   await mongoose.connect(mongoUri);
   isConnected = true;
 
+  await mongoose.connection.collection('orders').createIndex(
+    { paystackReference: 1 },
+    {
+      unique: true,
+      partialFilterExpression: {
+        paystackReference: { $type: 'string', $gt: '' },
+      },
+    }
+  );
+
   await seedDefaults();
   console.log('MongoDB connected');
   return mongoose.connection;

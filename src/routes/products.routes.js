@@ -8,11 +8,36 @@ const { publishRealtimeEvent } = require('../utils/realtime');
 
 const router = express.Router();
 
+async function loadApprovedFarmerIds() {
+  const farmers = await User.find({
+    role: 'farmer',
+    approved: true,
+    status: 'approved',
+  }).select('_id');
+  return farmers.map((farmer) => String(farmer._id));
+}
+
+async function findApprovedFarmer(id) {
+  if (!id) return null;
+  return User.findOne({
+    _id: id,
+    role: 'farmer',
+    approved: true,
+    status: 'approved',
+  });
+}
+
 router.get('/', async (req, res) => {
   const q = String(req.query.q || '').trim().toLowerCase();
   const sellerId = req.query.sellerId;
-  const query = {};
-  if (sellerId) query.sellerId = sellerId;
+  const approvedFarmerIds = await loadApprovedFarmerIds();
+  const query = { sellerId: { $in: approvedFarmerIds } };
+  if (sellerId) {
+    if (!approvedFarmerIds.includes(String(sellerId))) {
+      return res.json({ success: true, products: [] });
+    }
+    query.sellerId = sellerId;
+  }
   const products = await Product.find(query).sort({ createdAt: -1 });
   if (!q) {
     return res.json({ success: true, products: products.map(serializeProduct) });
@@ -29,7 +54,8 @@ router.get('/', async (req, res) => {
 router.get('/recommendations', async (req, res) => {
   const userId = String(req.query.userId || '').trim();
   const q = String(req.query.q || '').trim().toLowerCase();
-  const products = await Product.find({}).sort({ createdAt: -1 });
+  const approvedFarmerIds = await loadApprovedFarmerIds();
+  const products = await Product.find({ sellerId: { $in: approvedFarmerIds } }).sort({ createdAt: -1 });
   const salesMap = await buildSalesMap();
   const preferenceCategories = userId ? await loadPreferredCategories(userId) : [];
 
@@ -52,10 +78,11 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Product name and category are required' });
   }
   if (payload.sellerId) {
-    const farmer = await User.findById(payload.sellerId);
-    if (farmer) {
-      payload.location = payload.location || farmer.address || farmer.businessAddress || '';
+    const farmer = await findApprovedFarmer(payload.sellerId);
+    if (!farmer) {
+      return res.status(403).json({ success: false, message: 'Only approved farmers can post products' });
     }
+    payload.location = payload.location || farmer.address || farmer.businessAddress || '';
   }
   payload.price = Number(payload.price) || 0;
   payload.inventory = Number(payload.inventory ?? payload.quantity) || 0;
@@ -77,6 +104,12 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
+  const existingProduct = await Product.findById(req.params.id);
+  if (!existingProduct) return res.status(404).json({ success: false, message: 'Product not found' });
+  const farmer = await findApprovedFarmer(existingProduct.sellerId);
+  if (!farmer) {
+    return res.status(403).json({ success: false, message: 'Only approved farmers can manage products' });
+  }
   const payload = { ...req.body };
   if (payload.category) payload.category = String(payload.category).trim().toLowerCase();
   if (payload.inventory !== undefined) {
@@ -90,7 +123,6 @@ router.patch('/:id', async (req, res) => {
       .filter(Boolean);
   }
   const product = await Product.findByIdAndUpdate(req.params.id, payload, { new: true });
-  if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
   const serialized = serializeProduct(product);
   publishRealtimeEvent('product.changed', { productId: serialized.id, action: 'updated' });
   res.json({ success: true, product: serialized });
@@ -105,6 +137,8 @@ router.delete('/:id', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
+  const farmer = await findApprovedFarmer(product.sellerId);
+  if (!farmer) return res.status(404).json({ success: false, message: 'Product not found' });
   res.json({ success: true, product: serializeProduct(product) });
 });
 
