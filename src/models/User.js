@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
     accountNumber: { type: String, trim: true, default: '' },
     mobileMoneyNumber: { type: String, trim: true, default: '' },
     mobileMoneyMtnName: { type: String, trim: true, default: '' },
-    isVerified: { type: Boolean, default: true },
+    isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

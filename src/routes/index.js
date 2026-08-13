@@ -12,6 +12,7 @@ const paymentRoutes = require('./payment.routes');
 const eventsRoutes = require('./events.routes');
 const chatsRoutes = require('./chats.routes');
 const requestsRoutes = require('./requests.routes');
+const sellerReviewsRoutes = require('./sellerReviews.routes');
 
 const router = express.Router();
 
@@ -27,5 +28,6 @@ router.use('/payments', paymentRoutes);
 router.use('/events', eventsRoutes);
 router.use('/chats', chatsRoutes);
 router.use('/requests', requestsRoutes);
+router.use('/seller-reviews', sellerReviewsRoutes);
 
 module.exports = router;

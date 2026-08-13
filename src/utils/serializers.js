@@ -30,7 +30,7 @@ function serializeUser(user) {
     accountNumber: obj.accountNumber || '',
     mobileMoneyNumber: obj.mobileMoneyNumber || '',
     mobileMoneyMtnName: obj.mobileMoneyMtnName || '',
-    isVerified: obj.isVerified !== false,
+    isVerified: !!obj.isVerified,
     createdAt: obj.createdAt,
     updatedAt: obj.updatedAt,
   };
@@ -127,6 +127,19 @@ function serializeProduceRequest(request) {
   };
 }
 
+function serializeSellerReview(review) {
+  const obj = review.toObject ? review.toObject() : review;
+  return {
+    id: String(obj._id || obj.id),
+    sellerId: obj.sellerId ? String(obj.sellerId) : null,
+    buyerId: obj.buyerId ? String(obj.buyerId) : null,
+    rating: Number(obj.rating) || 0,
+    review: obj.review || '',
+    createdAt: obj.createdAt,
+    updatedAt: obj.updatedAt,
+  };
+}
+
 module.exports = {
   serializeUser,
   serializeProduct,
@@ -134,4 +147,5 @@ module.exports = {
   serializeHeroSlide,
   serializeChatMessage,
   serializeProduceRequest,
+  serializeSellerReview,
 };

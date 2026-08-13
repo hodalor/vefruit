@@ -63,6 +63,7 @@ router.post('/register-buyer', async (req, res) => {
     role: 'buyer',
     approved: true,
     status: 'approved',
+    isVerified: false,
     password: hashPassword(password),
   });
 
@@ -93,6 +94,7 @@ router.post('/register-farmer', async (req, res) => {
     role: 'farmer',
     approved: false,
     status: 'pending',
+    isVerified: false,
     password: hashPassword(password),
   });
 
@@ -111,6 +113,24 @@ router.post('/login-user', async (req, res) => {
     }
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
+  return res.json({ success: true, user: serializeUser(user) });
+});
+
+router.post('/login', async (req, res) => {
+  const { identifier, password } = req.body;
+  const user = await findAnyByIdentifier(identifier);
+
+  if (!user || user.password !== hashPassword(password)) {
+    return res.status(401).json({ success: false, message: 'Invalid credentials' });
+  }
+
+  if (user.role === 'farmer') {
+    if (!user.approved || ['rejected', 'suspended', 'blocked'].includes(user.status)) {
+      const reason = user.status === 'pending' ? 'not approved' : user.status;
+      return res.status(403).json({ success: false, message: `Farmer ${reason}` });
+    }
+  }
+
   return res.json({ success: true, user: serializeUser(user) });
 });
 

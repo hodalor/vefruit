@@ -12,12 +12,19 @@ function uniqueIds(values = []) {
 
 router.get('/', async (req, res) => {
   const { currentUserId, otherUserId, productId, threadKey } = req.query;
+  const shouldJoin = String(req.query.join || '').toLowerCase() === 'true';
   const query = {};
 
   if (threadKey) {
     query.threadKey = String(threadKey);
-    if (currentUserId) {
+    if (currentUserId && !shouldJoin) {
       query.participantIds = currentUserId;
+    }
+    if (currentUserId && shouldJoin) {
+      await ChatMessage.updateMany(
+        { threadKey: String(threadKey) },
+        { $addToSet: { participantIds: currentUserId } }
+      );
     }
   } else {
     if (productId) query.productId = productId;
@@ -41,14 +48,26 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Sender, recipient, and message are required' });
   }
 
-  const participantList = uniqueIds([...(participantIds || []), senderId, recipientId]);
+  let participantList = uniqueIds([...(participantIds || []), senderId, recipientId]);
+  const safeThreadKey = String(threadKey || '').trim();
+  if (safeThreadKey) {
+    const existingThreadMessages = await ChatMessage.find({ threadKey: safeThreadKey }).select('participantIds');
+    const threadParticipants = existingThreadMessages.flatMap((message) => message.participantIds || []);
+    participantList = uniqueIds([...participantList, ...threadParticipants]);
+    if (participantList.length) {
+      await ChatMessage.updateMany(
+        { threadKey: safeThreadKey },
+        { $addToSet: { participantIds: { $each: participantList } } }
+      );
+    }
+  }
   const message = await ChatMessage.create({
     senderId,
     senderRole: senderRole || 'buyer',
     recipientId,
     recipientRole: recipientRole || 'farmer',
     productId: productId || null,
-    threadKey: String(threadKey || '').trim(),
+    threadKey: safeThreadKey,
     participantIds: participantList,
     body: String(body).trim(),
   });
