@@ -37,6 +37,18 @@ function HeaderBar() {
     navigate(query ? `/?q=${encodeURIComponent(query)}` : '/');
   };
 
+  const handleBuyerLogout = () => {
+    logout();
+    setOpen(false);
+    navigate('/', { replace: true });
+  };
+
+  const handleFarmerLogout = () => {
+    sellerLogout();
+    setOpen(false);
+    navigate('/seller/login', { replace: true });
+  };
+
   return (
     <header className="HeaderBar">
       <div className="HeaderInner">
@@ -62,7 +74,18 @@ function HeaderBar() {
             {open && (
               <div className="Dropdown">
                 {current ? (
-                  <button className="DropdownItem" onClick={() => { logout(); setOpen(false); }}>Logout</button>
+                  <>
+                    {current.role === 'buyer' && (
+                      <>
+                        <Link className="DropdownItem" to="/buyer/dashboard" onClick={() => setOpen(false)}>Buyer Dashboard</Link>
+                        <Link className="DropdownItem" to="/orders" onClick={() => setOpen(false)}>My Orders</Link>
+                      </>
+                    )}
+                    {current.role === 'admin' && (
+                      <Link className="DropdownItem" to="/admin" onClick={() => setOpen(false)}>Admin Dashboard</Link>
+                    )}
+                    <button className="DropdownItem" onClick={handleBuyerLogout}>Logout</button>
+                  </>
                 ) : (
                   <>
                     <Link className="DropdownItem" to="/login" onClick={() => setOpen(false)}>Buyer Login</Link>
@@ -72,7 +95,7 @@ function HeaderBar() {
                 {sellerCurrent ? (
                   <>
                     <Link className="DropdownItem" to="/seller/dashboard" onClick={() => setOpen(false)}>Farmer Dashboard</Link>
-                    <button className="DropdownItem" onClick={() => { sellerLogout(); setOpen(false); }}>Logout Farmer</button>
+                    <button className="DropdownItem" onClick={handleFarmerLogout}>Logout Farmer</button>
                   </>
                 ) : (
                   <>

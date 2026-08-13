@@ -7,6 +7,7 @@ import LoadingButton from '../components/LoadingButton';
 import { useToast } from '../toast/ToastContext';
 
 const PENDING_CHECKOUT_KEY = 'vefruit_pending_checkout_v1';
+const PENDING_CHECKOUT_FALLBACK_KEY = 'vefruit_pending_checkout_fallback_v1';
 
 function Checkout() {
   const { items, total } = useCart();
@@ -45,6 +46,7 @@ function Checkout() {
     };
     try {
       sessionStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify(order));
+      localStorage.setItem(PENDING_CHECKOUT_FALLBACK_KEY, JSON.stringify(order));
       const payment = await initializePayment({
         email,
         amount: Math.round(total * 100),
@@ -59,6 +61,14 @@ function Checkout() {
       if (!payment?.authorization_url) {
         throw new Error('Unable to start Paystack checkout');
       }
+      sessionStorage.setItem(PENDING_CHECKOUT_KEY, JSON.stringify({
+        ...order,
+        paystackReference: payment.reference || '',
+      }));
+      localStorage.setItem(PENDING_CHECKOUT_FALLBACK_KEY, JSON.stringify({
+        ...order,
+        paystackReference: payment.reference || '',
+      }));
       showToast('Redirecting to Paystack for payment...', { type: 'info' });
       window.location.assign(payment.authorization_url);
     } catch (err) {

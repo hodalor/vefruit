@@ -1,24 +1,44 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useUserAuth } from '../auth/UserAuthContext';
+import { useSellerAuth } from '../auth/SellerAuthContext';
 
 const CartContext = createContext();
 
 const STORAGE_KEY = 'vefruit_cart_v1';
 
+function getOwnerKey({ buyerCurrent, sellerCurrent }) {
+  if (buyerCurrent?.id) return `buyer:${buyerCurrent.id}`;
+  if (sellerCurrent?.id) return `farmer:${sellerCurrent.id}`;
+  return 'guest';
+}
+
+function readCart(ownerKey) {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY}:${ownerKey}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function CartProvider({ children }) {
-  const [items, setItems] = useState(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { current: buyerCurrent } = useUserAuth();
+  const { current: sellerCurrent } = useSellerAuth();
+  const ownerKey = useMemo(
+    () => getOwnerKey({ buyerCurrent, sellerCurrent }),
+    [buyerCurrent, sellerCurrent]
+  );
+  const [items, setItems] = useState(() => readCart(ownerKey));
+
+  useEffect(() => {
+    setItems(readCart(ownerKey));
+  }, [ownerKey]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      localStorage.setItem(`${STORAGE_KEY}:${ownerKey}`, JSON.stringify(items));
     } catch {}
-  }, [items]);
+  }, [items, ownerKey]);
 
   const addItem = (product, qty = 1) => {
     setItems((prev) => {

@@ -1,49 +1,80 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { saveOrder } from '../orders/orderService';
-import { verifyPayment } from '../payments/paymentService';
+import { finalizePayment } from '../payments/paymentService';
 import { useCart } from '../cart/CartContext';
+import { useToast } from '../toast/ToastContext';
 
 const PENDING_CHECKOUT_KEY = 'vefruit_pending_checkout_v1';
+const PENDING_CHECKOUT_FALLBACK_KEY = 'vefruit_pending_checkout_fallback_v1';
+const MAX_CONFIRM_ATTEMPTS = 8;
+const RETRY_DELAY_MS = 3000;
+
+function wait(ms) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function isPendingConfirmation(error) {
+  return error?.status === 409 || /pending/i.test(String(error?.message || ''));
+}
 
 function CheckoutCallback() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { clearCart } = useCart();
+  const { showToast } = useToast();
   const [status, setStatus] = useState('Verifying payment...');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const reference = params.get('reference') || params.get('trxref');
-    const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY);
+    let cancelled = false;
 
-    if (!reference || !raw) {
-      setError('Missing payment reference or pending checkout details.');
-      return;
-    }
+    const finalize = async () => {
+      const raw = sessionStorage.getItem(PENDING_CHECKOUT_KEY);
+      const fallbackRaw = localStorage.getItem(PENDING_CHECKOUT_FALLBACK_KEY);
+      const pendingOrder = raw ? JSON.parse(raw) : (fallbackRaw ? JSON.parse(fallbackRaw) : null);
+      const reference = params.get('reference') || params.get('trxref') || pendingOrder?.paystackReference;
 
-    const order = JSON.parse(raw);
+      if (!reference) {
+        if (!cancelled) setError('Missing payment reference.');
+        return;
+      }
 
-    verifyPayment(reference)
-      .then(async (payment) => {
-        if (String(payment?.status || '').toLowerCase() !== 'success') {
-          throw new Error('Payment was not successful');
+      for (let attempt = 1; attempt <= MAX_CONFIRM_ATTEMPTS; attempt += 1) {
+        try {
+          if (!cancelled) {
+            setStatus(attempt === 1 ? 'Confirming your payment...' : `Waiting for payment confirmation... (${attempt}/${MAX_CONFIRM_ATTEMPTS})`);
+          }
+          await finalizePayment(reference, pendingOrder);
+          sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
+          localStorage.removeItem(PENDING_CHECKOUT_FALLBACK_KEY);
+          clearCart();
+          if (!cancelled) {
+            showToast('Payment confirmed and order saved successfully.');
+            navigate('/orders', { replace: true });
+          }
+          return;
+        } catch (err) {
+          if (isPendingConfirmation(err) && attempt < MAX_CONFIRM_ATTEMPTS) {
+            await wait(RETRY_DELAY_MS);
+            continue;
+          }
+          throw err;
         }
-        setStatus('Saving your order...');
-        await saveOrder({
-          ...order,
-          paymentStatus: 'paid',
-          orderStatus: 'processing',
-          paystackReference: reference,
-        });
-        sessionStorage.removeItem(PENDING_CHECKOUT_KEY);
-        clearCart();
-        navigate('/orders');
-      })
-      .catch((err) => {
+      }
+
+      throw new Error('Payment is still awaiting confirmation. Please reopen this page in a moment.');
+    };
+
+    finalize().catch((err) => {
+      if (!cancelled) {
         setError(err.message || 'Unable to verify payment');
-      });
-  }, [clearCart, navigate, params]);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clearCart, navigate, params, showToast]);
 
   return (
     <main className="Container">

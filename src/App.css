@@ -106,6 +106,41 @@ input[type="file"] {
   font-size: 1.1rem;
 }
 
+.BuyerDashboardGrid {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 1rem;
+}
+
+.BuyerHistoryGrid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.BuyerPaymentList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.BuyerPaymentRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.BuyerPaymentMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .Muted {
   color: #64748b;
   margin: 0.25rem 0 0.5rem 0;
@@ -946,6 +981,52 @@ input[type="file"] {
   gap: 0.85rem;
 }
 
+.AdminOrdersGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.AdminOrderCard {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #dbe3f2;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 1rem;
+  display: grid;
+  gap: 0.35rem;
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.AdminOrderCard:hover {
+  transform: translateY(-2px);
+  border-color: #c7d2fe;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.AdminOrderCardFooter {
+  margin-top: 0.15rem;
+  color: #2f67dc;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.AdminOrderPreviewNote {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.AdminOrderItemsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .AdminPillRow {
   display: flex;
   flex-wrap: wrap;
@@ -1120,6 +1201,10 @@ input[type="file"] {
   .AdminMetricGrid {
     grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
+
+  .AdminOrdersGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 920px) {
@@ -1138,7 +1223,10 @@ input[type="file"] {
   .AdminChartGrid,
   .AdminChartGridPrimary,
   .AdminPerformanceGrid,
+  .BuyerDashboardGrid,
   .AdminSearchGrid,
+  .AdminOrdersGrid,
+  .AdminOrderItemsGrid,
   .AdminFilterGrid,
   .AdminFormGrid,
   .AdminMetricGrid,

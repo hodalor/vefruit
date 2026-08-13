@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { addProduct, productsBySeller, updateProduct, deleteProduct, getProductEventName } from '../products/productService';
 import useProducts from '../products/useProducts';
@@ -70,6 +71,7 @@ function SellerDashboard() {
         if (prod && sellerId && (prod.sellerId === sellerId || i.sellerId === sellerId)) {
           list.push({
             orderId: o.id,
+            buyerId: o.buyerId,
             placedAt,
             status,
             productId: pid,
@@ -349,7 +351,9 @@ function SellerDashboard() {
   };
 
   const advanceOrderStatus = async (orderId, currentStatus) => {
-    const next = currentStatus === 'processing' ? 'packed' : (currentStatus === 'packed' ? 'shipped' : null);
+    const next = currentStatus === 'processing'
+      ? 'packaged'
+      : (currentStatus === 'packaged' ? 'sent-for-delivery' : null);
     if (!next) return;
     if (orderActionId === orderId) return;
     setOrderActionId(orderId);
@@ -647,23 +651,35 @@ function SellerDashboard() {
                       <div>
                         {i.name} × {i.qty} — GHS { (i.price * i.qty).toFixed(2) }
                       </div>
-                      <div className="OrderTotal">Status: {i.status}</div>
+                      <div className="OrderTotal">Status: {formatOrderStatusLabel(i.status)}</div>
+                      <div className="AdminPillRow" style={{ marginTop: '0.65rem' }}>
+                        {buildOrderTimeline(i.status).map((step) => (
+                          <span key={step.label} className="AdminPill" style={{ background: step.active ? '#dcfce7' : '#e2e8f0', color: step.active ? '#166534' : '#475569' }}>
+                            {step.label}
+                          </span>
+                        ))}
+                      </div>
                       {i.neededBy && <div className="Muted">Needed by: {i.neededBy}</div>}
                       {i.requestNote && <div className="Muted">Request: {i.requestNote}</div>}
-                      {(i.status === 'processing' || i.status === 'packed') && (
+                      {(i.status === 'processing' || i.status === 'packaged') && (
                         <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                           {i.status === 'processing' && (
                             <LoadingButton className="Btn" type="button" loading={orderActionId === i.orderId} loadingText="Updating..." onClick={() => advanceOrderStatus(i.orderId, i.status)}>
-                              Mark Packed
+                              Mark Packaged
                             </LoadingButton>
                           )}
-                          {i.status === 'packed' && (
+                          {i.status === 'packaged' && (
                             <LoadingButton className="Btn" type="button" loading={orderActionId === i.orderId} loadingText="Updating..." onClick={() => advanceOrderStatus(i.orderId, i.status)}>
-                              Ship
+                              Send For Delivery
                             </LoadingButton>
                           )}
                         </div>
                       )}
+                      <div style={{ marginTop: '0.65rem' }}>
+                        <Link to={`/messages?otherUserId=${encodeURIComponent(i.buyerId)}&productId=${encodeURIComponent(i.productId)}&buyerId=${encodeURIComponent(i.buyerId)}&farmerId=${encodeURIComponent(sellerId)}`}>
+                          Open Buyer Chat
+                        </Link>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -808,6 +824,21 @@ function SellerDashboard() {
       )}
     </main>
   );
+}
+
+function formatOrderStatusLabel(status) {
+  const current = String(status || '').replace(/-/g, ' ');
+  return current ? `${current[0].toUpperCase()}${current.slice(1)}` : 'Processing';
+}
+
+function buildOrderTimeline(status) {
+  const steps = ['processing', 'packaged', 'sent-for-delivery', 'completed'];
+  const normalized = String(status || 'processing');
+  const currentIndex = Math.max(0, steps.indexOf(normalized));
+  return steps.map((step, index) => ({
+    label: formatOrderStatusLabel(step),
+    active: index <= currentIndex,
+  }));
 }
 
 export default SellerDashboard;

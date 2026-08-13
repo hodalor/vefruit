@@ -14,3 +14,11 @@ export async function verifyPayment(reference) {
   const data = await api.get(`/payments/verify/${encodeURIComponent(reference)}`);
   return data.data;
 }
+
+export async function finalizePayment(reference, order) {
+  const data = await api.post('/payments/finalize', {
+    reference,
+    order,
+  });
+  return data.order;
+}

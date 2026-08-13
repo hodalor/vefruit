@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { addHeroSlide, deleteHeroSlide, reorderHeroSlides, updateHeroSlide } from '../hero/heroService';
 import useHeroSlides from '../hero/useHeroSlides';
 import { useSellerAuth } from '../auth/SellerAuthContext';
@@ -27,6 +28,7 @@ function Admin() {
   const [q, setQ] = useState('');
   const [pendingActions, setPendingActions] = useState({});
   const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [selectedFarmer, setSelectedFarmer] = useState(null);
@@ -58,6 +60,7 @@ function Admin() {
   const farmers = sellers;
   const productsMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const farmersMap = useMemo(() => new Map(farmers.map((f) => [f.id, f])), [farmers]);
+  const usersMap = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
 
   const isActionLoading = (key) => Boolean(pendingActions[key]);
 
@@ -103,6 +106,14 @@ function Admin() {
     setSelectedFarmer(null);
   };
 
+  const openOrderDetails = (order) => {
+    setSelectedOrder(order);
+  };
+
+  const closeOrderDetails = () => {
+    setSelectedOrder(null);
+  };
+
   useEffect(() => {
     const sync = () => loadOrders().then(setOrders).catch(() => setOrders([]));
     sync();
@@ -127,6 +138,16 @@ function Admin() {
       setSelectedFarmer(null);
     }
   }, [farmers, selectedFarmer?.id]);
+
+  useEffect(() => {
+    if (!selectedOrder?.id) return;
+    const liveOrder = orders.find((entry) => String(entry.id) === String(selectedOrder.id));
+    if (liveOrder) {
+      setSelectedOrder(liveOrder);
+    } else {
+      setSelectedOrder(null);
+    }
+  }, [orders, selectedOrder?.id]);
 
   const rangeOrders = useMemo(
     () => filterOrdersByRange(orders, period, fromDate, toDate),
@@ -822,18 +843,28 @@ function Admin() {
             {filteredOrders.length === 0 ? (
               <p className="Muted">No orders found.</p>
             ) : (
-              <div className="AdminOrdersList">
+              <div className="AdminOrdersGrid">
                 {filteredOrders.map((order) => (
-                  <div className="OrderCard" key={order.id}>
+                  <button className="AdminOrderCard" key={order.id} type="button" onClick={() => openOrderDetails(order)}>
                     <div className="OrderHeader">
-                      <strong>Order #{order.id}</strong>
+                      <strong>Order #{String(order.id).slice(-8)}</strong>
                       <span>{new Date(order.createdAt || order.placedAt).toLocaleString()}</span>
                     </div>
-                    <div className="OrderTotal">Status: {order.orderStatus || order.status || 'processing'}</div>
+                    <div className="OrderTotal">Status: {formatOrderStatusLabel(order.orderStatus || order.status || 'processing')}</div>
+                    <div className="Muted">Buyer: {usersMap.get(String(order.buyerId || ''))?.name || `Buyer ${String(order.buyerId || '').slice(-6)}`}</div>
                     <div className="Muted">Items: {getOrderItems(order).length}</div>
+                    <div className="Muted">Total: GHS {getOrderValue(order).toFixed(2)}</div>
+                    <div className="AdminPillRow" style={{ marginTop: '0.65rem' }}>
+                      {buildOrderTimeline(order.orderStatus || order.status || 'processing').map((step) => (
+                        <span key={step.label} className="AdminPill" style={{ background: step.active ? '#dcfce7' : '#e2e8f0', color: step.active ? '#166534' : '#475569' }}>
+                          {step.label}
+                        </span>
+                      ))}
+                    </div>
                     {order.neededBy && <div className="Muted">Needed by: {order.neededBy}</div>}
-                    {order.requestNote && <div className="Muted">Request: {order.requestNote}</div>}
-                  </div>
+                    {order.requestNote && <div className="Muted AdminOrderPreviewNote">{order.requestNote}</div>}
+                    <div className="AdminOrderCardFooter">Click to view full order details</div>
+                  </button>
                 ))}
               </div>
             )}
@@ -1144,6 +1175,16 @@ function Admin() {
               errorMessage: (err) => err.message || `Failed to reset ${selectedFarmer.name}'s password.`,
             }
           )}
+        />
+      )}
+
+      {selectedOrder && (
+        <OrderDetailModal
+          order={selectedOrder}
+          productsMap={productsMap}
+          farmersMap={farmersMap}
+          usersMap={usersMap}
+          onClose={closeOrderDetails}
         />
       )}
 
@@ -1739,6 +1780,89 @@ function FarmerDetailModal({
   );
 }
 
+function OrderDetailModal({ order, productsMap, farmersMap, usersMap, onClose }) {
+  const buyer = usersMap.get(String(order.buyerId || ''));
+  const items = getOrderItems(order);
+
+  return (
+    <div className="EditOverlay">
+      <div className="EditModal Card AdminModalMedium">
+        <div className="CardBody">
+          <div className="AdminSectionHeader">
+            <div>
+              <h3 style={{ marginTop: 0, marginBottom: '0.2rem' }}>Order #{order.id}</h3>
+              <p className="AdminSubtle">Full order breakdown including buyer, delivery note, products, payment reference, and chat access.</p>
+            </div>
+            <button className="BtnOutline" type="button" onClick={onClose}>Close</button>
+          </div>
+
+          <div className="AdminPillRow" style={{ marginTop: 0 }}>
+            <span className="AdminPill">{formatOrderStatusLabel(order.orderStatus || order.status || 'processing')}</span>
+            <span className="AdminPill">{order.paymentStatus || 'paid'}</span>
+            <span className="AdminPill">GHS {getOrderValue(order).toFixed(2)}</span>
+          </div>
+
+          <div className="FarmerDetailGrid">
+            <InfoBlock label="Buyer" value={buyer?.name || `Buyer ${String(order.buyerId || '').slice(-6)}`} />
+            <InfoBlock label="Buyer Phone" value={buyer?.phone} />
+            <InfoBlock label="Buyer Email" value={buyer?.email} />
+            <InfoBlock label="Placed At" value={new Date(order.createdAt || order.placedAt || Date.now()).toLocaleString()} />
+            <InfoBlock label="Needed By" value={order.neededBy} />
+            <InfoBlock label="Paystack Reference" value={order.paystackReference} />
+            <InfoBlock label="Payment Status" value={order.paymentStatus} />
+            <InfoBlock label="Delivery Note" value={order.requestNote} />
+          </div>
+
+          <div className="AdminPillRow">
+            {buildOrderTimeline(order.orderStatus || order.status || 'processing').map((step) => (
+              <span key={step.label} className="AdminPill" style={{ background: step.active ? '#dcfce7' : '#e2e8f0', color: step.active ? '#166534' : '#475569' }}>
+                {step.label}
+              </span>
+            ))}
+          </div>
+
+          <div className="AdminSectionHeader" style={{ marginTop: '1rem' }}>
+            <div>
+              <h4 style={{ margin: 0 }}>Products In This Order</h4>
+              <p className="AdminSubtle">Open the buyer-farmer chat directly from each ordered product.</p>
+            </div>
+          </div>
+
+          <div className="AdminOrderItemsGrid">
+            {items.map((item) => {
+              const product = productsMap.get(item.productId || item.id);
+              const farmer = farmersMap.get(String(item.sellerId || product?.sellerId || ''));
+              return (
+                <div className="Card" key={`${order.id}-${item.productId || item.id}`}>
+                  <img
+                    src={product ? resolveProductImage(product) : PRODUCT_FALLBACK_IMAGE}
+                    alt={product?.name || 'Order item'}
+                    onError={(e) => { e.currentTarget.src = PRODUCT_FALLBACK_IMAGE; }}
+                  />
+                  <div className="CardBody">
+                    <h4 style={{ marginTop: 0, marginBottom: '0.35rem' }}>{product?.name || `Item ${item.productId || item.id}`}</h4>
+                    <div className="AdminDetailList">
+                      <div><strong>Quantity:</strong> {getItemQty(item)}</div>
+                      <div><strong>Price:</strong> GHS {(Number(item.price) || 0).toFixed(2)}</div>
+                      <div><strong>Farmer:</strong> {farmer?.name || 'No farmer'}</div>
+                      {product?.category && <div><strong>Category:</strong> {product.category}</div>}
+                    </div>
+                    {item.sellerId && (
+                      <Link to={`/messages?buyerId=${encodeURIComponent(order.buyerId)}&farmerId=${encodeURIComponent(item.sellerId)}&productId=${encodeURIComponent(item.productId || item.id)}`}>
+                        Open Chat
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InfoBlock({ label, value }) {
   return (
     <div className="FarmerInfoBlock">
@@ -1923,6 +2047,21 @@ function getItemQty(item) {
 function getOrderValue(order) {
   if (order.totalAmount !== undefined) return Number(order.totalAmount) || 0;
   return getOrderItems(order).reduce((sum, item) => sum + (Number(item.price) || 0) * getItemQty(item), 0);
+}
+
+function formatOrderStatusLabel(status) {
+  const current = String(status || '').replace(/-/g, ' ');
+  return current ? `${current[0].toUpperCase()}${current.slice(1)}` : 'Processing';
+}
+
+function buildOrderTimeline(status) {
+  const steps = ['processing', 'packaged', 'sent-for-delivery', 'completed'];
+  const normalized = String(status || 'processing');
+  const currentIndex = Math.max(0, steps.indexOf(normalized));
+  return steps.map((step, index) => ({
+    label: formatOrderStatusLabel(step),
+    active: index <= currentIndex,
+  }));
 }
 
 function getFarmerStatus(farmer) {

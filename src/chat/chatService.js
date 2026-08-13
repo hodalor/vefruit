@@ -11,6 +11,7 @@ export async function loadChatMessages(params = {}) {
   if (params.currentUserId) query.set('currentUserId', params.currentUserId);
   if (params.otherUserId) query.set('otherUserId', params.otherUserId);
   if (params.productId) query.set('productId', params.productId);
+  if (params.threadKey) query.set('threadKey', params.threadKey);
   const suffix = query.toString() ? `?${query.toString()}` : '';
   const data = await api.get(`/chats${suffix}`);
   return data.messages || [];
@@ -24,4 +25,12 @@ export async function sendChatMessage(payload) {
 
 export function getChatEventName() {
   return CHAT_EVENT;
+}
+
+export function buildThreadKey({ buyerId, farmerId, productId }) {
+  const safeBuyerId = String(buyerId || '').trim();
+  const safeFarmerId = String(farmerId || '').trim();
+  const safeProductId = String(productId || '').trim();
+  if (!safeBuyerId || !safeFarmerId) return '';
+  return ['thread', [safeBuyerId, safeFarmerId].sort().join('-'), safeProductId || 'general'].join(':');
 }
