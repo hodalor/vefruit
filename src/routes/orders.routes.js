@@ -21,6 +21,13 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Buyer and order items are required' });
   }
 
+  if (paystackReference) {
+    const existing = await Order.findOne({ paystackReference: String(paystackReference).trim() });
+    if (existing) {
+      return res.json({ success: true, order: serializeOrder(existing) });
+    }
+  }
+
   const normalizedItems = [];
   for (const item of items) {
     const product = await Product.findById(item.productId);

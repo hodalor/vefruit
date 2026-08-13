@@ -29,6 +29,15 @@ async function findByIdentifier(identifier, role) {
   });
 }
 
+async function findAnyByIdentifier(identifier) {
+  const email = normalizeEmail(identifier);
+  const phone = normalizePhone(identifier);
+  const username = normalizeUsername(identifier);
+  return User.findOne({
+    $or: [{ email }, { phone }, { username }],
+  });
+}
+
 router.post('/register-buyer', async (req, res) => {
   const { name, phone, email, address, idType, idNumber, password } = req.body;
   if (!name || !phone || !password) {
@@ -96,6 +105,10 @@ router.post('/login-user', async (req, res) => {
   const { identifier, password } = req.body;
   const user = await findByIdentifier(identifier, { $in: ['buyer', 'admin'] });
   if (!user || user.password !== hashPassword(password)) {
+    const otherAccount = await findAnyByIdentifier(identifier);
+    if (otherAccount?.role === 'farmer' && otherAccount.password === hashPassword(password)) {
+      return res.status(403).json({ success: false, message: 'This account is registered as a farmer. Use Farmer Login.' });
+    }
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
   return res.json({ success: true, user: serializeUser(user) });
@@ -113,6 +126,15 @@ router.post('/login-farmer', async (req, res) => {
   });
 
   if (!user || user.password !== hashPassword(password)) {
+    const otherAccount = await findAnyByIdentifier(identifier);
+    if (otherAccount && ['buyer', 'admin'].includes(otherAccount.role) && otherAccount.password === hashPassword(password)) {
+      return res.status(403).json({
+        success: false,
+        message: otherAccount.role === 'admin'
+          ? 'This account is registered as an admin. Use Admin Login.'
+          : 'This account is registered as a buyer. Use Login.',
+      });
+    }
     return res.status(401).json({ success: false, message: 'Invalid credentials' });
   }
   if (!user.approved || ['rejected', 'suspended', 'blocked'].includes(user.status)) {

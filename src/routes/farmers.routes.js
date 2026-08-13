@@ -1,6 +1,7 @@
 const express = require('express');
 
 const User = require('../models/User');
+const { hashPassword } = require('../utils/hash');
 const { serializeUser } = require('../utils/serializers');
 const { publishRealtimeEvent } = require('../utils/realtime');
 
@@ -25,6 +26,27 @@ router.patch('/:id/status', async (req, res) => {
   if (!farmer) return res.status(404).json({ success: false, message: 'Farmer not found' });
   const serialized = serializeUser(farmer);
   publishRealtimeEvent('farmer.changed', { farmerId: serialized.id, action: 'updated' });
+  res.json({ success: true, farmer: serialized });
+});
+
+router.patch('/:id/reset-password', async (req, res) => {
+  const password = String(req.body.password || '').trim();
+  if (password.length < 6) {
+    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+  }
+
+  const farmer = await User.findOneAndUpdate(
+    { _id: req.params.id, role: 'farmer' },
+    { password: hashPassword(password) },
+    { new: true }
+  );
+
+  if (!farmer) {
+    return res.status(404).json({ success: false, message: 'Farmer not found' });
+  }
+
+  const serialized = serializeUser(farmer);
+  publishRealtimeEvent('farmer.changed', { farmerId: serialized.id, action: 'password-reset' });
   res.json({ success: true, farmer: serialized });
 });
 
