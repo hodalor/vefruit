@@ -1,24 +1,36 @@
 import { useState } from 'react';
 import { useUserAuth } from '../auth/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
+import LoadingButton from '../components/LoadingButton';
+import { useToast } from '../toast/ToastContext';
 
 function AdminLogin() {
   const { login } = useUserAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
     try {
       const user = await login(form);
       if (user.role !== 'admin') {
         setError('Not an admin account');
+        showToast('Not an admin account', { type: 'error' });
         return;
       }
+      showToast('Admin login successful.');
       navigate('/admin');
     } catch (err) {
       setError(err.message || 'Login failed');
+      showToast(err.message || 'Login failed', { type: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -38,7 +50,9 @@ function AdminLogin() {
               <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
             </label>
             <div className="FormActions">
-              <button className="Btn" type="submit">Login</button>
+              <LoadingButton className="Btn" type="submit" loading={submitting} loadingText="Signing in...">
+                Login
+              </LoadingButton>
             </div>
           </form>
           <div className="Muted" style={{ marginTop: '0.75rem' }}>

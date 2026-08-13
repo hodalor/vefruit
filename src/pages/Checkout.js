@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useCart } from '../cart/CartContext';
 import { useUserAuth } from '../auth/UserAuthContext';
 import { initializePayment } from '../payments/paymentService';
+import LoadingButton from '../components/LoadingButton';
+import { useToast } from '../toast/ToastContext';
 
 const PENDING_CHECKOUT_KEY = 'vefruit_pending_checkout_v1';
 
@@ -10,6 +12,7 @@ function Checkout() {
   const { items, total } = useCart();
   const navigate = useNavigate();
   const { current } = useUserAuth();
+  const { showToast } = useToast();
   const [contactEmail, setContactEmail] = useState(current?.email || '');
   const [neededBy, setNeededBy] = useState('');
   const [requestNote, setRequestNote] = useState('');
@@ -17,13 +20,16 @@ function Checkout() {
   const [error, setError] = useState('');
 
   const handlePay = async () => {
+    if (submitting) return;
     if (!current) {
+      showToast('Please login before checking out.', { type: 'info' });
       navigate('/login');
       return;
     }
     const email = String(contactEmail || current.email || '').trim();
     if (!email) {
       setError('An email address is required for Paystack checkout.');
+      showToast('An email address is required for Paystack checkout.', { type: 'error' });
       return;
     }
     setSubmitting(true);
@@ -53,9 +59,11 @@ function Checkout() {
       if (!payment?.authorization_url) {
         throw new Error('Unable to start Paystack checkout');
       }
+      showToast('Redirecting to Paystack for payment...', { type: 'info' });
       window.location.assign(payment.authorization_url);
     } catch (err) {
       setError(err.message || 'Unable to start payment');
+      showToast(err.message || 'Unable to start payment', { type: 'error' });
       setSubmitting(false);
     }
   };
@@ -87,9 +95,9 @@ function Checkout() {
               <textarea rows="4" value={requestNote} onChange={(e) => setRequestNote(e.target.value)} placeholder="Add delivery details or extra produce requirements." />
             </label>
             {error && <p style={{ color: 'crimson', margin: 0 }}>{error}</p>}
-            <button className="Btn" onClick={handlePay} disabled={submitting}>
-              {submitting ? 'Redirecting...' : 'Pay With Paystack'}
-            </button>
+            <LoadingButton className="Btn" type="button" onClick={handlePay} loading={submitting} loadingText="Redirecting...">
+              Pay With Paystack
+            </LoadingButton>
           </div>
         </div>
       )}

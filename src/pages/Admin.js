@@ -9,6 +9,8 @@ import { getOrderEventName, loadOrders } from '../orders/orderService';
 import { addCategory, deleteCategory, formatCategoryLabel, getCategoryValue, updateCategory } from '../categories/categoryService';
 import useCategories from '../categories/useCategories';
 import { PRODUCT_FALLBACK_IMAGE, SLIDE_FALLBACK_IMAGE, resolveImageSource, resolveProductImage } from '../utils/images';
+import LoadingButton from '../components/LoadingButton';
+import { useToast } from '../toast/ToastContext';
 
 const CHART_COLORS = ['#2f67dc', '#f59e0b', '#8b5cf6', '#0f766e', '#ec4899', '#22c55e', '#ef4444', '#94a3b8'];
 
@@ -23,10 +25,12 @@ function Admin() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [q, setQ] = useState('');
-  const [notice, setNotice] = useState('');
+  const [pendingActions, setPendingActions] = useState({});
   const [orders, setOrders] = useState([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [selectedFarmer, setSelectedFarmer] = useState(null);
+  const [farmerViewMode, setFarmerViewMode] = useState('cards');
   const [farmersMenuOpen, setFarmersMenuOpen] = useState(true);
   const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('categories');
@@ -45,8 +49,9 @@ function Admin() {
     imageUrl: '',
     farmerId: '',
   });
-  const { sellers, approveSeller, rejectSeller, suspendSeller, deleteSeller } = useSellerAuth();
+  const { sellers, approveSeller, rejectSeller, suspendSeller, deleteSeller, resetSellerPassword } = useSellerAuth();
   const { users, updateUser, deleteUser, register, current } = useUserAuth();
+  const { showToast } = useToast();
   const slides = useHeroSlides();
   const products = useProducts();
   const categories = useCategories();
@@ -54,9 +59,33 @@ function Admin() {
   const productsMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const farmersMap = useMemo(() => new Map(farmers.map((f) => [f.id, f])), [farmers]);
 
-  const flash = (message) => {
-    setNotice(message);
-    setTimeout(() => setNotice(''), 1800);
+  const isActionLoading = (key) => Boolean(pendingActions[key]);
+
+  const runAction = async (key, action, options = {}) => {
+    if (pendingActions[key]) return null;
+    setPendingActions((prev) => ({ ...prev, [key]: true }));
+    try {
+      const result = await action();
+      const successMessage = typeof options.successMessage === 'function'
+        ? options.successMessage(result)
+        : options.successMessage;
+      if (successMessage) {
+        showToast(successMessage, { type: options.successType || 'success' });
+      }
+      return result;
+    } catch (err) {
+      const message = typeof options.errorMessage === 'function'
+        ? options.errorMessage(err)
+        : (options.errorMessage || err.message || 'Action failed');
+      showToast(message, { type: 'error' });
+      return null;
+    } finally {
+      setPendingActions((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
   };
 
   const goToTab = (nextTab) => {
@@ -64,6 +93,14 @@ function Admin() {
     setQ('');
     if (nextTab.startsWith('farmers-')) setFarmersMenuOpen(true);
     if (nextTab.startsWith('settings-')) setSettingsMenuOpen(true);
+  };
+
+  const openFarmerDetails = (farmer) => {
+    setSelectedFarmer(farmer);
+  };
+
+  const closeFarmerDetails = () => {
+    setSelectedFarmer(null);
   };
 
   useEffect(() => {
@@ -80,6 +117,16 @@ function Admin() {
     const names = categories.map((category) => getCategoryValue(category));
     setProductForm((prev) => ({ ...prev, category: names.includes(prev.category) ? prev.category : getCategoryValue(categories[0]) }));
   }, [categories]);
+
+  useEffect(() => {
+    if (!selectedFarmer?.id) return;
+    const liveFarmer = farmers.find((entry) => String(entry.id) === String(selectedFarmer.id));
+    if (liveFarmer) {
+      setSelectedFarmer(liveFarmer);
+    } else {
+      setSelectedFarmer(null);
+    }
+  }, [farmers, selectedFarmer?.id]);
 
   const rangeOrders = useMemo(
     () => filterOrdersByRange(orders, period, fromDate, toDate),
@@ -190,11 +237,20 @@ function Admin() {
   }, [buyerUsers, farmers, search]);
 
   const addUrl = async () => {
-    if (!imageUrl.trim()) return;
-    await addHeroSlide({ title: title || 'Banner', image: imageUrl, cta: { text: 'Shop', href: '/' } });
-    setTitle('');
-    setImageUrl('');
-    flash('Hero slide added');
+    const nextImageUrl = imageUrl.trim();
+    if (!nextImageUrl) return;
+    await runAction(
+      'hero-add-url',
+      async () => {
+        await addHeroSlide({ title: title || 'Banner', image: nextImageUrl, cta: { text: 'Shop', href: '/' } });
+        setTitle('');
+        setImageUrl('');
+      },
+      {
+        successMessage: 'Hero slide added.',
+        errorMessage: 'Failed to add hero slide.',
+      }
+    );
   };
 
   const toDataUrls = async (fileList) => {
@@ -214,14 +270,33 @@ function Admin() {
 
   const uploadImages = async (files) => {
     const urls = await toDataUrls(files);
-    await Promise.all(urls.map((url) => addHeroSlide({ title: title || 'Banner', image: url, cta: { text: 'Shop', href: '/' } })));
-    setTitle('');
-    flash('Hero slides uploaded');
+    if (!urls.length) {
+      showToast('No images were selected.', { type: 'error' });
+      return;
+    }
+    await runAction(
+      'hero-upload',
+      async () => {
+        await Promise.all(urls.map((url) => addHeroSlide({ title: title || 'Banner', image: url, cta: { text: 'Shop', href: '/' } })));
+        setTitle('');
+        setImageUrl('');
+      },
+      {
+        successMessage: urls.length === 1 ? 'Hero slide uploaded.' : 'Hero slides uploaded.',
+        errorMessage: 'Failed to upload hero slides.',
+      }
+    );
   };
 
   const removeSlide = async (id) => {
-    await deleteHeroSlide(id);
-    flash('Hero slide removed');
+    await runAction(
+      `hero-delete-${id}`,
+      () => deleteHeroSlide(id),
+      {
+        successMessage: 'Hero slide removed.',
+        errorMessage: 'Failed to remove hero slide.',
+      }
+    );
   };
 
   const moveUp = async (id) => {
@@ -229,7 +304,14 @@ function Admin() {
     const index = ids.indexOf(id);
     if (index > 0) {
       [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
-      await reorderHeroSlides(ids);
+      await runAction(
+        `hero-up-${id}`,
+        () => reorderHeroSlides(ids),
+        {
+          successMessage: 'Hero slide moved up.',
+          errorMessage: 'Failed to reorder hero slides.',
+        }
+      );
     }
   };
 
@@ -238,7 +320,14 @@ function Admin() {
     const index = ids.indexOf(id);
     if (index >= 0 && index < ids.length - 1) {
       [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]];
-      await reorderHeroSlides(ids);
+      await runAction(
+        `hero-down-${id}`,
+        () => reorderHeroSlides(ids),
+        {
+          successMessage: 'Hero slide moved down.',
+          errorMessage: 'Failed to reorder hero slides.',
+        }
+      );
     }
   };
 
@@ -250,9 +339,17 @@ function Admin() {
 
   const saveEdit = async () => {
     if (!editingId) return;
-    await updateHeroSlide(editingId, { title: editingTitle, image: editingImageUrl });
-    setEditingId(null);
-    flash('Hero slide updated');
+    await runAction(
+      'hero-edit-save',
+      async () => {
+        await updateHeroSlide(editingId, { title: editingTitle, image: editingImageUrl });
+        setEditingId(null);
+      },
+      {
+        successMessage: 'Hero slide updated.',
+        errorMessage: 'Failed to update hero slide.',
+      }
+    );
   };
 
   const cancelEdit = () => setEditingId(null);
@@ -263,52 +360,70 @@ function Admin() {
   };
 
   const removeProduct = async (id) => {
-    await deleteProduct(id);
-    flash('Product removed');
+    await runAction(
+      `product-delete-${id}`,
+      () => deleteProduct(id),
+      {
+        successMessage: 'Product removed.',
+        errorMessage: 'Failed to remove product.',
+      }
+    );
   };
 
   const submitProduct = async (e) => {
     e.preventDefault();
     const farmer = approvedFarmers.find((entry) => String(entry.id) === productForm.farmerId);
     if (!farmer) {
-      flash('Select an approved farmer first');
+      showToast('Select an approved farmer first.', { type: 'error' });
       return;
     }
-    await addProduct({
-      name: productForm.name,
-      category: productForm.category,
-      price: productForm.price,
-      inventory: productForm.inventory,
-      description: productForm.description,
-      tags: productForm.tags,
-      image: productForm.imageUrl || null,
-      images: productForm.imageUrl ? [productForm.imageUrl] : [],
-      sellerId: farmer.id,
-    });
-    setProductForm({
-      name: '',
-      category: getCategoryValue(categories[0]) || '',
-      price: '',
-      inventory: '',
-      description: '',
-      tags: '',
-      imageUrl: '',
-      farmerId: '',
-    });
-    setShowAddProduct(false);
-    flash(`Product added for ${farmer.name}`);
+    await runAction(
+      'product-create',
+      async () => {
+        await addProduct({
+          name: productForm.name,
+          category: productForm.category,
+          price: productForm.price,
+          inventory: productForm.inventory,
+          description: productForm.description,
+          tags: productForm.tags,
+          image: productForm.imageUrl || null,
+          images: productForm.imageUrl ? [productForm.imageUrl] : [],
+          sellerId: farmer.id,
+        });
+        setProductForm({
+          name: '',
+          category: getCategoryValue(categories[0]) || '',
+          price: '',
+          inventory: '',
+          description: '',
+          tags: '',
+          imageUrl: '',
+          farmerId: '',
+        });
+        setShowAddProduct(false);
+      },
+      {
+        successMessage: `Product created for ${farmer.name}.`,
+        errorMessage: 'Failed to create product.',
+      }
+    );
   };
 
   const submitCategory = async (e) => {
     e.preventDefault();
-    try {
-      await addCategory({ name: categoryName, parentId: parentCategoryId });
-      setCategoryName('');
-      setParentCategoryId('');
-      flash('Category created');
-    } catch (err) {
-      flash(err.message || 'Failed to create category');
-    }
+    await runAction(
+      'category-create',
+      async () => {
+        await addCategory({ name: categoryName, parentId: parentCategoryId });
+        setCategoryName('');
+        setParentCategoryId('');
+      },
+      {
+        successMessage: 'Category created.',
+        errorMessage: (err) => err.message || 'Failed to create category.',
+      }
+    );
   };
 
   const categoryCounts = useMemo(() => {
@@ -407,8 +522,6 @@ function Admin() {
             </p>
           </div>
         </div>
-
-        {notice && <div className="AdminNotice">{notice}</div>}
 
         {tab === 'dashboard' && (
           <div className="AdminDashboard">
@@ -556,9 +669,33 @@ function Admin() {
                           </div>
                           <div className="AdminButtonRow">
                             {user.accountType === 'buyer' ? (
-                              <button className="BtnDanger" type="button" onClick={() => deleteUser(user.id)}>Remove Buyer</button>
+                              <LoadingButton
+                                className="BtnDanger"
+                                type="button"
+                                loading={isActionLoading(`buyer-delete-${user.id}`)}
+                                loadingText="Removing..."
+                                onClick={() => runAction(
+                                  `buyer-delete-${user.id}`,
+                                  () => deleteUser(user.id),
+                                  {
+                                    successMessage: 'Buyer removed.',
+                                    errorMessage: 'Failed to remove buyer.',
+                                  }
+                                )}
+                              >
+                                Remove Buyer
+                              </LoadingButton>
                             ) : (
-                              <button className="BtnOutline" type="button" onClick={() => goToTab(getFarmerStatus(user) === 'approved' ? 'farmers-list' : getFarmerStatus(user) === 'pending' ? 'farmers-review' : 'farmers-rejected')}>Open Farmer Record</button>
+                              <button
+                                className="BtnOutline"
+                                type="button"
+                                onClick={() => {
+                                  goToTab(getFarmerStatus(user) === 'approved' ? 'farmers-list' : getFarmerStatus(user) === 'pending' ? 'farmers-review' : 'farmers-rejected');
+                                  openFarmerDetails(user);
+                                }}
+                              >
+                                Open Farmer Record
+                              </button>
                             )}
                           </div>
                         </div>
@@ -591,11 +728,37 @@ function Admin() {
                           <div className="AdminInlineField">
                             <label>
                               Role
-                              <select value={user.role || 'admin'} onChange={(e) => updateUser(user.id, { role: e.target.value })}>
+                              <select
+                                value={user.role || 'admin'}
+                                disabled={isActionLoading(`admin-role-${user.id}`)}
+                                onChange={(e) => runAction(
+                                  `admin-role-${user.id}`,
+                                  () => updateUser(user.id, { role: e.target.value }),
+                                  {
+                                    successMessage: 'Admin role updated.',
+                                    errorMessage: 'Failed to update admin role.',
+                                  }
+                                )}
+                              >
                                 <option value="admin">Admin</option>
                               </select>
                             </label>
-                            <button className="BtnDanger" type="button" onClick={() => deleteUser(user.id)}>Remove</button>
+                            <LoadingButton
+                              className="BtnDanger"
+                              type="button"
+                              loading={isActionLoading(`admin-delete-${user.id}`)}
+                              loadingText="Removing..."
+                              onClick={() => runAction(
+                                `admin-delete-${user.id}`,
+                                () => deleteUser(user.id),
+                                {
+                                  successMessage: 'Admin removed.',
+                                  errorMessage: 'Failed to remove admin.',
+                                }
+                              )}
+                            >
+                              Remove
+                            </LoadingButton>
                           </div>
                         </div>
                       </div>
@@ -615,12 +778,9 @@ function Admin() {
             placeholder="Search farmers awaiting review"
             farmers={filteredReviewFarmers}
             emptyText="No farmers waiting for review."
-            actions={(farmer) => (
-              <>
-                <button className="Btn" type="button" onClick={async () => { await approveSeller(farmer.id); goToTab('farmers-list'); flash(`${farmer.name} approved`); }}>Approve</button>
-                <button className="BtnDanger" type="button" onClick={async () => { await rejectSeller(farmer.id); goToTab('farmers-rejected'); flash(`${farmer.name} rejected`); }}>Reject</button>
-              </>
-            )}
+            viewMode={farmerViewMode}
+            onViewModeChange={setFarmerViewMode}
+            onSelectFarmer={openFarmerDetails}
           />
         )}
 
@@ -632,12 +792,9 @@ function Admin() {
             placeholder="Search approved farmers"
             farmers={filteredApprovedFarmers}
             emptyText="No approved farmers found."
-            actions={(farmer) => (
-              <>
-                <button className="BtnOutline" type="button" onClick={async () => { await suspendSeller(farmer.id); flash(`${farmer.name} suspended`); }}>Suspend</button>
-                <button className="BtnDanger" type="button" onClick={async () => { await rejectSeller(farmer.id); goToTab('farmers-rejected'); flash(`${farmer.name} moved to rejected`); }}>Reject</button>
-              </>
-            )}
+            viewMode={farmerViewMode}
+            onViewModeChange={setFarmerViewMode}
+            onSelectFarmer={openFarmerDetails}
           />
         )}
 
@@ -649,12 +806,9 @@ function Admin() {
             placeholder="Search rejected farmers"
             farmers={filteredRejectedFarmers}
             emptyText="No rejected farmers found."
-            actions={(farmer) => (
-              <>
-                <button className="Btn" type="button" onClick={async () => { await approveSeller(farmer.id); goToTab('farmers-list'); flash(`${farmer.name} restored`); }}>Approve</button>
-                <button className="BtnDanger" type="button" onClick={async () => { await deleteSeller(farmer.id); flash(`${farmer.name} removed`); }}>Delete</button>
-              </>
-            )}
+            viewMode={farmerViewMode}
+            onViewModeChange={setFarmerViewMode}
+            onSelectFarmer={openFarmerDetails}
           />
         )}
 
@@ -723,7 +877,15 @@ function Admin() {
                           <span className="AdminPill">Stock {Number(product.inventory ?? product.quantity ?? 0)}</span>
                         </div>
                         <div className="AdminButtonRow">
-                          <button className="BtnDanger" type="button" onClick={() => removeProduct(product.id)}>Remove</button>
+                          <LoadingButton
+                            className="BtnDanger"
+                            type="button"
+                            loading={isActionLoading(`product-delete-${product.id}`)}
+                            loadingText="Removing..."
+                            onClick={() => removeProduct(product.id)}
+                          >
+                            Remove
+                          </LoadingButton>
                         </div>
                       </div>
                     </div>
@@ -787,7 +949,9 @@ function Admin() {
                         </select>
                       </label>
                       <div className="AdminFieldWide AdminButtonRow">
-                        <button className="Btn" type="submit">Create Category</button>
+                        <LoadingButton className="Btn" type="submit" loading={isActionLoading('category-create')} loadingText="Creating...">
+                          Create Category
+                        </LoadingButton>
                       </div>
                     </form>
                   </div>
@@ -817,14 +981,23 @@ function Admin() {
                             >
                               Edit
                             </button>
-                            <button
+                            <LoadingButton
                               className="BtnDanger"
                               type="button"
+                              loading={isActionLoading(`category-delete-${category.id}`)}
+                              loadingText="Deleting..."
                               disabled={(categoryCounts.get(getCategoryValue(category)) || 0) > 0}
-                              onClick={async () => { await deleteCategory(category); flash(`${formatCategoryLabel(category)} removed`); }}
+                              onClick={() => runAction(
+                                `category-delete-${category.id}`,
+                                () => deleteCategory(category),
+                                {
+                                  successMessage: `${formatCategoryLabel(category)} removed.`,
+                                  errorMessage: `Failed to remove ${formatCategoryLabel(category)}.`,
+                                }
+                              )}
                             >
                               Delete
-                            </button>
+                            </LoadingButton>
                           </div>
                         </div>
                       ))}
@@ -863,10 +1036,12 @@ function Admin() {
                         <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
                       </label>
                       <div className="AdminButtonRow AdminFormActions">
-                        <button className="Btn" type="button" onClick={addUrl}>Add From URL</button>
+                        <LoadingButton className="Btn" type="button" onClick={addUrl} loading={isActionLoading('hero-add-url')} loadingText="Adding...">
+                          Add From URL
+                        </LoadingButton>
                         <label className="BtnOutline AdminUploadButton">
-                          Upload Images
-                          <input type="file" accept="image/*" multiple onChange={(e) => uploadImages(e.target.files)} />
+                          {isActionLoading('hero-upload') ? 'Uploading...' : 'Upload Images'}
+                          <input type="file" accept="image/*" multiple onChange={(e) => uploadImages(e.target.files)} disabled={isActionLoading('hero-upload')} />
                         </label>
                       </div>
                     </div>
@@ -886,10 +1061,16 @@ function Admin() {
                             <div className="CardBody">
                               <h3>{slide.title}</h3>
                               <div className="AdminButtonRow">
-                                <button className="BtnOutline" type="button" onClick={() => moveUp(slide.id)}>Up</button>
-                                <button className="BtnOutline" type="button" onClick={() => moveDown(slide.id)}>Down</button>
+                                <LoadingButton className="BtnOutline" type="button" onClick={() => moveUp(slide.id)} loading={isActionLoading(`hero-up-${slide.id}`)} loadingText="Moving...">
+                                  Up
+                                </LoadingButton>
+                                <LoadingButton className="BtnOutline" type="button" onClick={() => moveDown(slide.id)} loading={isActionLoading(`hero-down-${slide.id}`)} loadingText="Moving...">
+                                  Down
+                                </LoadingButton>
                                 <button className="BtnOutline" type="button" onClick={() => startEdit(slide)}>Edit</button>
-                                <button className="BtnDanger" type="button" onClick={() => removeSlide(slide.id)}>Delete</button>
+                                <LoadingButton className="BtnDanger" type="button" onClick={() => removeSlide(slide.id)} loading={isActionLoading(`hero-delete-${slide.id}`)} loadingText="Deleting...">
+                                  Delete
+                                </LoadingButton>
                               </div>
                             </div>
                           </div>
@@ -903,6 +1084,68 @@ function Admin() {
           </div>
         )}
       </section>
+
+      {selectedFarmer && (
+        <FarmerDetailModal
+          farmer={selectedFarmer}
+          onClose={closeFarmerDetails}
+          isActionLoading={isActionLoading}
+          onApprove={() => runAction(
+            `approve-farmer-${selectedFarmer.id}`,
+            async () => {
+              await approveSeller(selectedFarmer.id);
+              if (tab !== 'farmers-list') goToTab('farmers-list');
+            },
+            {
+              successMessage: `${selectedFarmer.name} approved.`,
+              errorMessage: `Failed to approve ${selectedFarmer.name}.`,
+            }
+          )}
+          onDisable={() => runAction(
+            `disable-farmer-${selectedFarmer.id}`,
+            async () => {
+              await suspendSeller(selectedFarmer.id);
+              if (tab !== 'farmers-rejected') goToTab('farmers-rejected');
+            },
+            {
+              successMessage: `${selectedFarmer.name} disabled.`,
+              errorMessage: `Failed to disable ${selectedFarmer.name}.`,
+            }
+          )}
+          onReject={() => runAction(
+            `reject-farmer-${selectedFarmer.id}`,
+            async () => {
+              await rejectSeller(selectedFarmer.id);
+              if (tab !== 'farmers-rejected') goToTab('farmers-rejected');
+            },
+            {
+              successMessage: `${selectedFarmer.name} rejected.`,
+              errorMessage: `Failed to reject ${selectedFarmer.name}.`,
+            }
+          )}
+          onDelete={async () => {
+            const removed = await runAction(
+              `delete-farmer-${selectedFarmer.id}`,
+              () => deleteSeller(selectedFarmer.id),
+              {
+                successMessage: `${selectedFarmer.name} removed.`,
+                errorMessage: `Failed to remove ${selectedFarmer.name}.`,
+              }
+            );
+            if (removed !== null) {
+              closeFarmerDetails();
+            }
+          }}
+          onResetPassword={(password) => runAction(
+            `reset-password-${selectedFarmer.id}`,
+            () => resetSellerPassword(selectedFarmer.id, password),
+            {
+              successMessage: `Password reset for ${selectedFarmer.name}.`,
+              errorMessage: (err) => err.message || `Failed to reset ${selectedFarmer.name}'s password.`,
+            }
+          )}
+        />
+      )}
 
       {editingId && (
         <div className="EditOverlay">
@@ -924,7 +1167,9 @@ function Admin() {
                 </label>
                 <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
                   <button className="BtnOutline" type="button" onClick={cancelEdit}>Cancel</button>
-                  <button className="Btn" type="button" onClick={saveEdit}>Save</button>
+                  <LoadingButton className="Btn" type="button" onClick={saveEdit} loading={isActionLoading('hero-edit-save')} loadingText="Saving...">
+                    Save
+                  </LoadingButton>
                 </div>
               </div>
             </div>
@@ -987,7 +1232,9 @@ function Admin() {
                 </label>
                 <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
                   <button className="BtnOutline" type="button" onClick={() => setShowAddProduct(false)}>Cancel</button>
-                  <button className="Btn" type="submit">Save Product</button>
+                  <LoadingButton className="Btn" type="submit" loading={isActionLoading('product-create')} loadingText="Saving...">
+                    Save Product
+                  </LoadingButton>
                 </div>
               </form>
             </div>
@@ -1006,11 +1253,23 @@ function Admin() {
                 </div>
                 <button className="BtnOutline" type="button" onClick={() => setShowCreateUserModal(false)}>Close</button>
               </div>
-              <AdminCreateForm onCreate={async (payload) => {
-                await register({ ...payload, role: 'admin' });
-                flash('Admin created');
-                setShowCreateUserModal(false);
-              }} />
+              <AdminCreateForm
+                loading={isActionLoading('admin-create')}
+                onCreate={async (payload) => {
+                  const created = await runAction(
+                    'admin-create',
+                    () => register({ ...payload, role: 'admin' }),
+                    {
+                      successMessage: 'Admin created.',
+                      errorMessage: 'Failed to create admin.',
+                    }
+                  );
+                  if (created) {
+                    setShowCreateUserModal(false);
+                  }
+                  return created;
+                }}
+              />
             </div>
           </div>
         </div>
@@ -1031,11 +1290,19 @@ function Admin() {
                 className="AdminFormGrid"
                 onSubmit={async (e) => {
                   e.preventDefault();
-                  await updateCategory(editingCategoryId, { name: editingCategoryName, parentId: editingCategoryParentId });
-                  flash('Category updated');
-                  setEditingCategoryId(null);
-                  setEditingCategoryName('');
-                  setEditingCategoryParentId('');
+                  const updated = await runAction(
+                    'category-edit-save',
+                    () => updateCategory(editingCategoryId, { name: editingCategoryName, parentId: editingCategoryParentId }),
+                    {
+                      successMessage: 'Category updated.',
+                      errorMessage: (err) => err.message || 'Failed to update category.',
+                    }
+                  );
+                  if (updated) {
+                    setEditingCategoryId(null);
+                    setEditingCategoryName('');
+                    setEditingCategoryParentId('');
+                  }
                 }}
               >
                 <label>
@@ -1055,7 +1322,9 @@ function Admin() {
                 </label>
                 <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
                   <button className="BtnOutline" type="button" onClick={() => setEditingCategoryId(null)}>Cancel</button>
-                  <button className="Btn" type="submit">Save Category</button>
+                  <LoadingButton className="Btn" type="submit" loading={isActionLoading('category-edit-save')} loadingText="Saving...">
+                    Save Category
+                  </LoadingButton>
                 </div>
               </form>
             </div>
@@ -1258,7 +1527,17 @@ function VerticalBarChart({ items }) {
   );
 }
 
-function FarmerSection({ title, searchValue, onSearchChange, placeholder, farmers, emptyText, actions }) {
+function FarmerSection({
+  title,
+  searchValue,
+  onSearchChange,
+  placeholder,
+  farmers,
+  emptyText,
+  viewMode,
+  onViewModeChange,
+  onSelectFarmer,
+}) {
   return (
     <div className="AdminStack">
       <section className="Card">
@@ -1266,19 +1545,71 @@ function FarmerSection({ title, searchValue, onSearchChange, placeholder, farmer
           <div className="AdminSectionHeader">
             <div>
               <h2 className="SectionTitle">{title}</h2>
+              <p className="AdminSubtle">Click a farmer to open the full profile and manage approval, disable/enable, and password reset.</p>
+            </div>
+            <div className="AdminViewToggle">
+              <button className={`BtnOutline ${viewMode === 'cards' ? 'AdminViewToggleActive' : ''}`} type="button" onClick={() => onViewModeChange('cards')}>Card View</button>
+              <button className={`BtnOutline ${viewMode === 'table' ? 'AdminViewToggleActive' : ''}`} type="button" onClick={() => onViewModeChange('table')}>Table View</button>
             </div>
           </div>
-          <input className="SearchInput" placeholder={placeholder} value={searchValue} onChange={(e) => onSearchChange(e.target.value)} />
+          <div className="AdminSearchWrap">
+            <input className="SearchInput" placeholder={placeholder} value={searchValue} onChange={(e) => onSearchChange(e.target.value)} />
+          </div>
         </div>
       </section>
 
       {farmers.length === 0 ? (
         <p className="Muted">{emptyText}</p>
+      ) : viewMode === 'table' ? (
+        <div className="Card">
+          <div className="CardBody">
+            <div className="AdminTableWrap">
+              <table className="AdminTable">
+                <thead>
+                  <tr>
+                    <th>Farmer</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {farmers.map((farmer) => (
+                    <tr key={farmer.id} className="AdminTableRowInteractive" onClick={() => onSelectFarmer(farmer)}>
+                      <td>
+                        <strong>{farmer.name}</strong>
+                        {farmer.businessName && <div className="Muted">{farmer.businessName}</div>}
+                      </td>
+                      <td>{farmer.phone || '-'}</td>
+                      <td>{farmer.email || '-'}</td>
+                      <td>{capitalize(getFarmerStatus(farmer))}</td>
+                      <td>{new Date(farmer.createdAt || Date.now()).toLocaleDateString()}</td>
+                      <td>
+                        <button
+                          className="BtnOutline"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectFarmer(farmer);
+                          }}
+                        >
+                          Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       ) : (
-        <div className="Grid">
+        <div className="Grid FarmerCardGrid">
           {farmers.map((farmer) => (
-            <div className="Card" key={farmer.id}>
-              <div className="CardBody">
+            <button className="FarmerCardButton Card" key={farmer.id} type="button" onClick={() => onSelectFarmer(farmer)}>
+              <div className="CardBody FarmerCardBody">
                 <h3>{farmer.name}</h3>
                 <p className="Muted">{farmer.phone || 'No phone number'}</p>
                 {farmer.email && <p className="Muted">{farmer.email}</p>}
@@ -1290,24 +1621,129 @@ function FarmerSection({ title, searchValue, onSearchChange, placeholder, farmer
                   {farmer.address && <div><strong>Address:</strong> {farmer.address}</div>}
                   {(farmer.idType || farmer.idNumber) && <div><strong>ID:</strong> {[farmer.idType, farmer.idNumber].filter(Boolean).join(' - ')}</div>}
                   {farmer.businessName && <div><strong>Business:</strong> {farmer.businessName}</div>}
-                  {farmer.businessAddress && <div><strong>Business Address:</strong> {farmer.businessAddress}</div>}
                   {farmer.businessPhone && <div><strong>Business Phone:</strong> {farmer.businessPhone}</div>}
-                  {farmer.registrationNumber && <div><strong>Registration No:</strong> {farmer.registrationNumber}</div>}
-                  {(farmer.bankName || farmer.accountName || farmer.accountNumber) && (
-                    <div><strong>Bank:</strong> {[farmer.bankName, farmer.branchName, farmer.branchCode, farmer.accountName, farmer.accountNumber].filter(Boolean).join(' | ')}</div>
-                  )}
-                  {(farmer.mobileMoneyNumber || farmer.mobileMoneyMtnName) && (
-                    <div><strong>MTN MoMo:</strong> {[farmer.mobileMoneyMtnName, farmer.mobileMoneyNumber].filter(Boolean).join(' - ')}</div>
-                  )}
+                  {farmer.bankName && <div><strong>Bank:</strong> {farmer.bankName}</div>}
                 </div>
-                <div className="AdminButtonRow">
-                  {actions(farmer)}
-                </div>
+                <div className="FarmerCardFooter">View full details and manage account</div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function FarmerDetailModal({
+  farmer,
+  onClose,
+  onApprove,
+  onDisable,
+  onReject,
+  onDelete,
+  onResetPassword,
+  isActionLoading,
+}) {
+  const [newPassword, setNewPassword] = useState('');
+  const status = getFarmerStatus(farmer);
+  const canEnable = ['rejected', 'suspended', 'blocked'].includes(status);
+  const canDisable = status === 'approved';
+  const canReject = ['pending', 'approved'].includes(status);
+  const canApprove = status === 'pending' || canEnable;
+
+  return (
+    <div className="EditOverlay">
+      <div className="EditModal Card AdminModalMedium">
+        <div className="CardBody">
+          <div className="AdminSectionHeader">
+            <div>
+              <h3 style={{ marginTop: 0, marginBottom: '0.2rem' }}>{farmer.name}</h3>
+              <p className="AdminSubtle">Review account details, approval state, access status, and password support.</p>
+            </div>
+            <button className="BtnOutline" type="button" onClick={onClose}>Close</button>
+          </div>
+
+          <div className="AdminPillRow" style={{ marginTop: 0 }}>
+            <span className="AdminPill">{capitalize(status)}</span>
+            <span className="AdminPill">{farmer.email || 'No email'}</span>
+            <span className="AdminPill">{farmer.phone || 'No phone'}</span>
+          </div>
+
+          <div className="FarmerDetailGrid">
+            <InfoBlock label="Address" value={farmer.address} />
+            <InfoBlock label="ID" value={[farmer.idType, farmer.idNumber].filter(Boolean).join(' - ')} />
+            <InfoBlock label="Business Name" value={farmer.businessName} />
+            <InfoBlock label="Business Address" value={farmer.businessAddress} />
+            <InfoBlock label="Business Phone" value={farmer.businessPhone} />
+            <InfoBlock label="Registration Number" value={farmer.registrationNumber} />
+            <InfoBlock label="Bank Details" value={[farmer.bankName, farmer.branchName, farmer.branchCode, farmer.accountName, farmer.accountNumber].filter(Boolean).join(' | ')} />
+            <InfoBlock label="MTN MoMo" value={[farmer.mobileMoneyMtnName, farmer.mobileMoneyNumber].filter(Boolean).join(' - ')} />
+          </div>
+
+          <div className="AdminSectionHeader" style={{ marginTop: '1rem' }}>
+            <div>
+              <h4 style={{ margin: 0 }}>Account Actions</h4>
+              <p className="AdminSubtle">Approve, disable, enable again, reject, or permanently remove the farmer account.</p>
+            </div>
+          </div>
+          <div className="AdminButtonRow">
+            {canApprove && (
+              <LoadingButton className="Btn" type="button" loading={isActionLoading(`approve-farmer-${farmer.id}`)} loadingText="Saving..." onClick={onApprove}>
+                {status === 'pending' ? 'Approve Account' : 'Enable Account'}
+              </LoadingButton>
+            )}
+            {canDisable && (
+              <LoadingButton className="BtnOutline" type="button" loading={isActionLoading(`disable-farmer-${farmer.id}`)} loadingText="Disabling..." onClick={onDisable}>
+                Disable Account
+              </LoadingButton>
+            )}
+            {canReject && (
+              <LoadingButton className="BtnDanger" type="button" loading={isActionLoading(`reject-farmer-${farmer.id}`)} loadingText="Rejecting..." onClick={onReject}>
+                Reject Account
+              </LoadingButton>
+            )}
+            <LoadingButton className="BtnDanger" type="button" loading={isActionLoading(`delete-farmer-${farmer.id}`)} loadingText="Deleting..." onClick={onDelete}>
+              Delete Farmer
+            </LoadingButton>
+          </div>
+
+          <div className="FarmerResetCard">
+            <div>
+              <h4 style={{ margin: 0 }}>Reset Password</h4>
+              <p className="AdminSubtle">Set a new password for the farmer without requiring the old password.</p>
+            </div>
+            <div className="FarmerResetRow">
+              <input
+                type="password"
+                placeholder="Enter a new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <LoadingButton
+                className="Btn"
+                type="button"
+                loading={isActionLoading(`reset-password-${farmer.id}`)}
+                loadingText="Resetting..."
+                onClick={async () => {
+                  const updated = await onResetPassword(newPassword);
+                  if (updated) setNewPassword('');
+                }}
+              >
+                Reset Password
+              </LoadingButton>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoBlock({ label, value }) {
+  return (
+    <div className="FarmerInfoBlock">
+      <strong>{label}</strong>
+      <span>{value || 'Not provided'}</span>
     </div>
   );
 }
@@ -1323,22 +1759,19 @@ function SearchSummaryCard({ label, value }) {
   );
 }
 
-function AdminCreateForm({ onCreate }) {
+function AdminCreateForm({ onCreate, loading = false }) {
   const [form, setForm] = useState({ name: '', username: '', phone: '', password: '', role: 'admin' });
   const [error, setError] = useState('');
-  const [ok, setOk] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
+    if (loading) return;
     setError('');
-    setOk('');
-    try {
-      await onCreate(form);
-      setOk('Admin created');
+    const created = await onCreate(form);
+    if (created) {
       setForm({ name: '', username: '', phone: '', password: '', role: 'admin' });
-      setTimeout(() => setOk(''), 1500);
-    } catch (err) {
-      setError(err.message || 'Failed');
+    } else {
+      setError('Failed');
     }
   };
 
@@ -1367,8 +1800,9 @@ function AdminCreateForm({ onCreate }) {
         </select>
       </label>
       <div className="AdminFieldWide AdminButtonRow">
-        <button className="Btn" type="submit">Create Admin</button>
-        {ok && <span style={{ color: '#16a34a' }}>{ok}</span>}
+        <LoadingButton className="Btn" type="submit" loading={loading} loadingText="Creating...">
+          Create Admin
+        </LoadingButton>
         {error && <span style={{ color: 'crimson' }}>{error}</span>}
       </div>
     </form>

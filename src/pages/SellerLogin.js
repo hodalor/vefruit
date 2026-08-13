@@ -1,20 +1,31 @@
 import { useState } from 'react';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useNavigate } from 'react-router-dom';
+import LoadingButton from '../components/LoadingButton';
+import { useToast } from '../toast/ToastContext';
 
 function SellerLogin() {
   const { login } = useSellerAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+    setError('');
     try {
-      login(form);
+      await login(form);
+      showToast('Login successful. Welcome back.');
       navigate('/seller/dashboard');
     } catch (err) {
       setError(err.message || 'Login failed');
+      showToast(err.message || 'Login failed', { type: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -34,7 +45,9 @@ function SellerLogin() {
               <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
             </label>
             <div className="FormActions">
-              <button className="Btn" type="submit">Login</button>
+              <LoadingButton className="Btn" type="submit" loading={submitting} loadingText="Signing in...">
+                Login
+              </LoadingButton>
             </div>
           </form>
         </div>

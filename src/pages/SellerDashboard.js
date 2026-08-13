@@ -6,17 +6,24 @@ import { getOrderEventName, loadOrders, updateOrderStatus } from '../orders/orde
 import useCategories from '../categories/useCategories';
 import { formatCategoryLabel, getCategoryValue } from '../categories/categoryService';
 import { PRODUCT_FALLBACK_IMAGE, THUMB_FALLBACK_IMAGE, resolveProductImage } from '../utils/images';
+import LoadingButton from '../components/LoadingButton';
+import { useToast } from '../toast/ToastContext';
 
 function SellerDashboard() {
   const { current, logout } = useSellerAuth();
+  const { showToast } = useToast();
   const categories = useCategories();
   const [tab, setTab] = useState('dashboard');
   const [form, setForm] = useState({ name: '', category: 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
+  const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', category: 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
   const [myProducts, setMyProducts] = useState([]);
   const [orders, setOrders] = useState([]);
-  const [message, setMessage] = useState('');
+  const [creatingProduct, setCreatingProduct] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [orderActionId, setOrderActionId] = useState(null);
   const [revTooltip, setRevTooltip] = useState(null);
   const allProducts = useProducts();
 
@@ -230,25 +237,27 @@ function SellerDashboard() {
 
   const submitProduct = async (e) => {
     e.preventDefault();
-    await addProduct({
-      name: form.name,
-      category: form.category,
-      price: form.price,
-      inventory: form.inventory,
-      description: form.description,
-      tags: form.tags,
-      images: (form.images || []).slice(0, 5),
-      sellerId: current.id,
-    });
-    setForm({ name: '', category: getCategoryValue(categories[0]) || 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
-    setMessage('Product added');
-    setTimeout(() => setMessage(''), 1500);
-  };
-
-  const saveProduct = async (p) => {
-    await updateProduct(p.id, { price: Number(p.price), inventory: Number(p.inventory) });
-    setMessage('Product updated');
-    setTimeout(() => setMessage(''), 1500);
+    if (creatingProduct) return;
+    setCreatingProduct(true);
+    try {
+      await addProduct({
+        name: form.name,
+        category: form.category,
+        price: form.price,
+        inventory: form.inventory,
+        description: form.description,
+        tags: form.tags,
+        images: (form.images || []).slice(0, 5),
+        sellerId: current.id,
+      });
+      setForm({ name: '', category: getCategoryValue(categories[0]) || 'fruit', price: '', inventory: '', description: '', tags: '', images: [] });
+      setShowAddProduct(false);
+      showToast('Product created successfully.');
+    } catch (err) {
+      showToast(err.message || 'Failed to create product.', { type: 'error' });
+    } finally {
+      setCreatingProduct(false);
+    }
   };
 
   const toDataUrls = async (fileList) => {
@@ -299,19 +308,26 @@ function SellerDashboard() {
   };
 
   const saveEdit = async () => {
-    await updateProduct(editingId, {
-      name: editForm.name,
-      category: editForm.category,
-      price: Number(editForm.price),
-      inventory: Number(editForm.inventory),
-      description: editForm.description,
-      tags: Array.isArray(editForm.tags) ? editForm.tags : String(editForm.tags || '').split(',').map((s) => s.trim()).filter(Boolean),
-      images: (editForm.images || []).slice(0, 5),
-      image: (editForm.images || [])[0] || null,
-    });
-    setEditingId(null);
-    setMessage('Product updated');
-    setTimeout(() => setMessage(''), 1500);
+    if (savingEdit) return;
+    setSavingEdit(true);
+    try {
+      await updateProduct(editingId, {
+        name: editForm.name,
+        category: editForm.category,
+        price: Number(editForm.price),
+        inventory: Number(editForm.inventory),
+        description: editForm.description,
+        tags: Array.isArray(editForm.tags) ? editForm.tags : String(editForm.tags || '').split(',').map((s) => s.trim()).filter(Boolean),
+        images: (editForm.images || []).slice(0, 5),
+        image: (editForm.images || [])[0] || null,
+      });
+      setEditingId(null);
+      showToast('Product updated successfully.');
+    } catch (err) {
+      showToast(err.message || 'Failed to update product.', { type: 'error' });
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const cancelEdit = () => {
@@ -319,18 +335,32 @@ function SellerDashboard() {
   };
 
   const removeProduct = async (id) => {
-    await deleteProduct(id);
-    if (editingId === id) setEditingId(null);
-    setMessage('Product deleted');
-    setTimeout(() => setMessage(''), 1500);
+    if (deletingId === id) return;
+    setDeletingId(id);
+    try {
+      await deleteProduct(id);
+      if (editingId === id) setEditingId(null);
+      showToast('Product deleted successfully.');
+    } catch (err) {
+      showToast(err.message || 'Failed to delete product.', { type: 'error' });
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   const advanceOrderStatus = async (orderId, currentStatus) => {
     const next = currentStatus === 'processing' ? 'packed' : (currentStatus === 'packed' ? 'shipped' : null);
     if (!next) return;
-    await updateOrderStatus(orderId, next);
-    setMessage(`Order #${orderId} marked ${next}`);
-    setTimeout(() => setMessage(''), 1500);
+    if (orderActionId === orderId) return;
+    setOrderActionId(orderId);
+    try {
+      await updateOrderStatus(orderId, next);
+      showToast(`Order #${orderId} marked ${next}.`);
+    } catch (err) {
+      showToast(err.message || 'Failed to update order status.', { type: 'error' });
+    } finally {
+      setOrderActionId(null);
+    }
   };
 
 
@@ -350,7 +380,6 @@ function SellerDashboard() {
           <button className="BtnOutline" onClick={logout} style={{ marginTop: '1rem', width: '100%' }}>Logout</button>
         </aside>
         <section className="Content">
-          {message && <p style={{ color: '#16a34a' }}>{message}</p>}
           {tab === 'dashboard' && (
             <div>
               <h2 className="SectionTitle">Dashboard</h2>
@@ -560,60 +589,12 @@ function SellerDashboard() {
           )}
           {tab === 'products' && (
             <div>
-              <h2 className="SectionTitle">Products</h2>
-              <div className="Card">
-                <div className="CardBody">
-                  <h3 style={{ marginTop: 0 }}>Add Product</h3>
-                  <form onSubmit={submitProduct} className="Form" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(200px, 1fr))', gap: '0.75rem' }}>
-                    <label>
-                      Name
-                      <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-                    </label>
-                    <label>
-                      Category
-                      <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                        {categories.map((category) => (
-                          <option key={category.id} value={getCategoryValue(category)}>{formatCategoryLabel(category)}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      Price (GHS)
-                      <input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
-                    </label>
-                    <label>
-                      Inventory
-                      <input type="number" value={form.inventory} onChange={(e) => setForm({ ...form, inventory: e.target.value })} required />
-                    </label>
-                    <label style={{ gridColumn: '1 / span 2' }}>
-                      Description
-                      <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-                    </label>
-                    <label style={{ gridColumn: '1 / span 2' }}>
-                      Tags (comma-separated)
-                      <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
-                    </label>
-                    <div style={{ gridColumn: '1 / span 2' }}>
-                      <label>
-                        Upload Images (max 5)
-                        <input type="file" accept="image/*" multiple onChange={(e) => addFormImages(e.target.files)} />
-                      </label>
-                      {(form.images || []).length > 0 && (
-                        <div className="Thumbs" style={{ marginTop: '0.5rem' }}>
-                          {(form.images || []).map((src, idx) => (
-                            <div key={idx} className="Thumb">
-                              <img src={src} alt={`img-${idx}`} onError={(e) => { e.currentTarget.src = THUMB_FALLBACK_IMAGE; }} />
-                              <button type="button" className="BtnOutline" onClick={() => removeFormImage(idx)}>Remove</button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ gridColumn: '1 / span 2' }}>
-                      <button className="Btn" type="submit">Add</button>
-                    </div>
-                  </form>
+              <div className="AdminSectionHeader">
+                <div>
+                  <h2 className="SectionTitle">Products</h2>
+                  <p className="AdminSubtle">Manage your produce listings. Use Add Product to open the create form.</p>
                 </div>
+                <button className="Btn" type="button" onClick={() => setShowAddProduct(true)}>Add Product</button>
               </div>
 
               <h3 style={{ marginTop: '1rem' }}>My Products</h3>
@@ -631,21 +612,17 @@ function SellerDashboard() {
                       />
                       <div className="CardBody">
                         <h3>{p.name}</h3>
-                        <p className="Muted">{p.category}</p>
-                        <div style={{ display: 'grid', gap: '0.5rem' }}>
-                          <label>
-                            Price (GHS)
-                            <input type="number" step="0.01" value={p.price} onChange={(e) => setMyProducts((prev) => prev.map((x) => x.id === p.id ? { ...x, price: e.target.value } : x))} />
-                          </label>
-                          <label>
-                            Inventory
-                            <input type="number" value={p.inventory || 0} onChange={(e) => setMyProducts((prev) => prev.map((x) => x.id === p.id ? { ...x, inventory: e.target.value } : x))} />
-                          </label>
+                        <p className="Muted">{formatCategoryLabel(p.category)}</p>
+                        <div className="AdminDetailList">
+                          <div><strong>Price:</strong> GHS {Number(p.price || 0).toFixed(2)}</div>
+                          <div><strong>Inventory:</strong> {Number(p.inventory ?? p.quantity ?? 0)}</div>
+                          {p.description && <div><strong>Description:</strong> {p.description}</div>}
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button className="Btn" onClick={() => saveProduct(p)}>Save</button>
-                          <button className="BtnOutline" onClick={() => startEdit(p)}>Edit</button>
-                          <button className="BtnDanger" onClick={() => removeProduct(p.id)}>Delete</button>
+                          <button className="BtnOutline" type="button" onClick={() => startEdit(p)}>Edit</button>
+                          <LoadingButton className="BtnDanger" type="button" loading={deletingId === p.id} loadingText="Deleting..." onClick={() => removeProduct(p.id)}>
+                            Delete
+                          </LoadingButton>
                         </div>
                       </div>
                     </div>
@@ -676,10 +653,14 @@ function SellerDashboard() {
                       {(i.status === 'processing' || i.status === 'packed') && (
                         <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                           {i.status === 'processing' && (
-                            <button className="Btn" onClick={() => advanceOrderStatus(i.orderId, i.status)}>Mark Packed</button>
+                            <LoadingButton className="Btn" type="button" loading={orderActionId === i.orderId} loadingText="Updating..." onClick={() => advanceOrderStatus(i.orderId, i.status)}>
+                              Mark Packed
+                            </LoadingButton>
                           )}
                           {i.status === 'packed' && (
-                            <button className="Btn" onClick={() => advanceOrderStatus(i.orderId, i.status)}>Ship</button>
+                            <LoadingButton className="Btn" type="button" loading={orderActionId === i.orderId} loadingText="Updating..." onClick={() => advanceOrderStatus(i.orderId, i.status)}>
+                              Ship
+                            </LoadingButton>
                           )}
                         </div>
                       )}
@@ -691,12 +672,85 @@ function SellerDashboard() {
           )}
         </section>
       </div>
+      {showAddProduct && (
+        <div className="EditOverlay">
+          <div className="EditModal Card AdminModalMedium">
+            <div className="CardBody">
+              <div className="AdminSectionHeader">
+                <div>
+                  <h3 style={{ marginTop: 0, marginBottom: '0.2rem' }}>Add Product</h3>
+                  <p className="AdminSubtle">Create a new produce listing from this modal.</p>
+                </div>
+                <button className="BtnOutline" type="button" onClick={() => setShowAddProduct(false)}>Close</button>
+              </div>
+              <form onSubmit={submitProduct} className="AdminFormGrid">
+                <label>
+                  Name
+                  <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                </label>
+                <label>
+                  Category
+                  <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                    {categories.map((category) => (
+                      <option key={category.id} value={getCategoryValue(category)}>{formatCategoryLabel(category)}</option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Price (GHS)
+                  <input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
+                </label>
+                <label>
+                  Inventory
+                  <input type="number" value={form.inventory} onChange={(e) => setForm({ ...form, inventory: e.target.value })} required />
+                </label>
+                <label className="AdminFieldWide">
+                  Description
+                  <textarea rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </label>
+                <label className="AdminFieldWide">
+                  Tags (comma-separated)
+                  <input value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
+                </label>
+                <div className="AdminFieldWide">
+                  <label>
+                    Upload Images (max 5)
+                    <input type="file" accept="image/*" multiple onChange={(e) => addFormImages(e.target.files)} />
+                  </label>
+                  {(form.images || []).length > 0 && (
+                    <div className="Thumbs" style={{ marginTop: '0.5rem' }}>
+                      {(form.images || []).map((src, idx) => (
+                        <div key={idx} className="Thumb">
+                          <img src={src} alt={`img-${idx}`} onError={(e) => { e.currentTarget.src = THUMB_FALLBACK_IMAGE; }} />
+                          <button type="button" className="BtnOutline" onClick={() => removeFormImage(idx)}>Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
+                  <button className="BtnOutline" type="button" onClick={() => setShowAddProduct(false)}>Cancel</button>
+                  <LoadingButton className="Btn" type="submit" loading={creatingProduct} loadingText="Creating...">
+                    Create Product
+                  </LoadingButton>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
       {editingId && (
         <div className="EditOverlay">
-          <div className="EditModal Card">
+          <div className="EditModal Card AdminModalMedium">
             <div className="CardBody">
-              <h3 style={{ marginTop: 0 }}>Edit Product</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              <div className="AdminSectionHeader">
+                <div>
+                  <h3 style={{ marginTop: 0, marginBottom: '0.2rem' }}>Edit Product</h3>
+                  <p className="AdminSubtle">Fields become editable only inside this edit modal.</p>
+                </div>
+                <button className="BtnOutline" type="button" onClick={cancelEdit}>Close</button>
+              </div>
+              <div className="AdminFormGrid">
                 <label>
                   Name
                   <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} />
@@ -717,15 +771,15 @@ function SellerDashboard() {
                   Inventory
                   <input type="number" value={editForm.inventory} onChange={(e) => setEditForm({ ...editForm, inventory: e.target.value })} />
                 </label>
-                <label style={{ gridColumn: '1 / span 2' }}>
+                <label className="AdminFieldWide">
                   Description
-                  <input value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+                  <textarea rows="3" value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
                 </label>
-                <label style={{ gridColumn: '1 / span 2' }}>
+                <label className="AdminFieldWide">
                   Tags (comma-separated)
                   <input value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })} />
                 </label>
-                <div style={{ gridColumn: '1 / span 2' }}>
+                <div className="AdminFieldWide">
                   <label>
                     Upload Images (max 5)
                     <input type="file" accept="image/*" multiple onChange={(e) => addEditImages(e.target.files)} />
@@ -741,9 +795,11 @@ function SellerDashboard() {
                     </div>
                   )}
                 </div>
-                <div style={{ gridColumn: '1 / span 2', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                  <button className="BtnOutline" onClick={cancelEdit}>Cancel</button>
-                  <button className="Btn" onClick={saveEdit}>Save</button>
+                <div className="AdminFieldWide AdminButtonRow AdminAlignEnd">
+                  <button className="BtnOutline" type="button" onClick={cancelEdit}>Cancel</button>
+                  <LoadingButton className="Btn" type="button" loading={savingEdit} loadingText="Saving..." onClick={saveEdit}>
+                    Save
+                  </LoadingButton>
                 </div>
               </div>
             </div>

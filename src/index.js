@@ -7,18 +7,21 @@ import { BrowserRouter } from 'react-router-dom';
 import { CartProvider } from './cart/CartContext';
 import { SellerAuthProvider } from './auth/SellerAuthContext';
 import { UserAuthProvider } from './auth/UserAuthContext';
+import { ToastProvider } from './toast/ToastContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <BrowserRouter>
-      <UserAuthProvider>
-        <SellerAuthProvider>
-          <CartProvider>
-            <App />
-          </CartProvider>
-        </SellerAuthProvider>
-      </UserAuthProvider>
+      <ToastProvider>
+        <UserAuthProvider>
+          <SellerAuthProvider>
+            <CartProvider>
+              <App />
+            </CartProvider>
+          </SellerAuthProvider>
+        </UserAuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

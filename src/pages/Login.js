@@ -1,20 +1,31 @@
 import { useState } from 'react';
 import { useUserAuth } from '../auth/UserAuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../toast/ToastContext';
+import LoadingButton from '../components/LoadingButton';
 
 function Login() {
   const { login } = useUserAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({ identifier: '', password: '' });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setError('');
+    setSubmitting(true);
     try {
       await login(form);
+      showToast('Login successful. Welcome back.');
       navigate('/');
     } catch (err) {
       setError(err.message || 'Login failed');
+      showToast(err.message || 'Login failed', { type: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -34,7 +45,9 @@ function Login() {
               <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
             </label>
             <div className="FormActions">
-              <button className="Btn" type="submit">Login</button>
+              <LoadingButton className="Btn" type="submit" loading={submitting} loadingText="Logging in...">
+                Login
+              </LoadingButton>
             </div>
           </form>
         </div>

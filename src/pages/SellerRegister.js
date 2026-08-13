@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../toast/ToastContext';
+import LoadingButton from '../components/LoadingButton';
 
 function SellerRegister() {
   const { register } = useSellerAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: '',
@@ -26,14 +29,22 @@ function SellerRegister() {
     mobileMoneyMtnName: '',
   });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setError('');
+    setSubmitting(true);
     try {
-      register(form);
+      await register(form);
+      showToast('Account created successfully. Waiting for approval.');
       navigate('/seller/dashboard');
     } catch (err) {
       setError(err.message || 'Registration failed');
+      showToast(err.message || 'Registration failed', { type: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -120,7 +131,9 @@ function SellerRegister() {
               <input value={form.mobileMoneyMtnName} onChange={(e) => setForm({ ...form, mobileMoneyMtnName: e.target.value })} />
             </label>
             <div className="FormActions">
-              <button className="Btn" type="submit">Register</button>
+              <LoadingButton className="Btn" type="submit" loading={submitting} loadingText="Creating account...">
+                Register
+              </LoadingButton>
             </div>
           </form>
         </div>

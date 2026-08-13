@@ -7,6 +7,12 @@
   min-height: 100vh;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 select,
 textarea {
@@ -139,6 +145,8 @@ input[type="file"] {
 .SearchInput {
   flex: 1;
   min-height: 40px;
+  width: 100%;
+  max-width: 100%;
 }
 .SearchButton {
   padding: 0.5rem 0.9rem;
@@ -232,6 +240,84 @@ input[type="file"] {
   padding: 0.4rem 0.6rem;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.Btn:disabled,
+.BtnDanger:disabled,
+.BtnOutline:disabled,
+.SearchButton:disabled,
+.AccountBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.Btn.is-loading,
+.BtnDanger.is-loading,
+.BtnOutline.is-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.BtnSpinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: currentColor;
+  animation: btn-spin 0.75s linear infinite;
+}
+
+.BtnOutline .BtnSpinner {
+  border-color: rgba(15, 23, 42, 0.18);
+}
+
+.ToastViewport {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 120;
+  display: grid;
+  gap: 0.75rem;
+  width: min(360px, calc(100vw - 2rem));
+}
+
+.Toast {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+  color: #fff;
+}
+
+.Toast--success { background: linear-gradient(135deg, #16a34a, #22c55e); }
+.Toast--error { background: linear-gradient(135deg, #dc2626, #ef4444); }
+.Toast--info { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+
+.ToastMessage {
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.ToastClose {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .AuthLayout { display: grid; place-items: center; padding: 2rem 1rem; }
@@ -800,12 +886,13 @@ input[type="file"] {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.85rem;
+  flex-wrap: wrap;
 }
 
 .AdminFormGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(220px, 1fr));
-  gap: 0.85rem;
+  gap: 1.05rem 1.25rem;
 }
 
 .AdminFormGrid label {
@@ -851,6 +938,7 @@ input[type="file"] {
   gap: 0.75rem;
   align-items: end;
   justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .AdminOrdersList {
@@ -927,6 +1015,103 @@ input[type="file"] {
   max-width: 920px;
 }
 
+.AdminSearchWrap {
+  width: min(100%, 760px);
+}
+
+.AdminViewToggle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.AdminViewToggleActive {
+  border-color: #2f67dc;
+  color: #2f67dc;
+  background: #eef2ff;
+}
+
+.AdminTableRowInteractive {
+  cursor: pointer;
+}
+
+.AdminTableRowInteractive:hover {
+  background: #eef4ff;
+}
+
+.FarmerCardGrid {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.FarmerCardButton {
+  appearance: none;
+  border: 1px solid #e2e8f0;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.FarmerCardButton:hover {
+  transform: translateY(-2px);
+  border-color: #c7d2fe;
+  box-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
+.FarmerCardBody {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.FarmerCardFooter {
+  margin-top: 0.25rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #2f67dc;
+}
+
+.FarmerDetailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.FarmerInfoBlock {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.9rem 1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.FarmerInfoBlock strong {
+  color: #0f172a;
+}
+
+.FarmerInfoBlock span {
+  color: #475569;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.FarmerResetCard {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid #dbe3f6;
+  background: #f8fbff;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.FarmerResetRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 @media (max-width: 1200px) {
   .AdminShell {
     grid-template-columns: 240px minmax(0, 1fr);
@@ -956,7 +1141,9 @@ input[type="file"] {
   .AdminSearchGrid,
   .AdminFilterGrid,
   .AdminFormGrid,
-  .AdminMetricGrid {
+  .AdminMetricGrid,
+  .FarmerDetailGrid,
+  .FarmerResetRow {
     grid-template-columns: 1fr;
   }
 }

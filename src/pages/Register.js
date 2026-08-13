@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { useUserAuth } from '../auth/UserAuthContext';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useToast } from '../toast/ToastContext';
+import LoadingButton from '../components/LoadingButton';
 
 function Register() {
   const { register } = useUserAuth();
   const { register: registerFarmer } = useSellerAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const initialRole = params.get('role') === 'seller' ? 'seller' : 'buyer';
@@ -31,19 +34,28 @@ function Register() {
     mobileMoneyMtnName: '',
   });
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const submit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setError('');
+    setSubmitting(true);
     try {
       if (form.role === 'seller') {
         await registerFarmer(form);
+        showToast('Account created successfully. Waiting for approval.');
         navigate('/seller/dashboard');
       } else {
         await register(form);
+        showToast('Account created successfully.');
         navigate('/');
       }
     } catch (err) {
       setError(err.message || 'Registration failed');
+      showToast(err.message || 'Registration failed', { type: 'error' });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -141,7 +153,9 @@ function Register() {
               </>
             )}
             <div className="FormActions">
-              <button className="Btn" type="submit">Register</button>
+              <LoadingButton className="Btn" type="submit" loading={submitting} loadingText="Creating account...">
+                Register
+              </LoadingButton>
             </div>
           </form>
         </div>

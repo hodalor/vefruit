@@ -125,6 +125,14 @@ export function SellerAuthProvider({ children }) {
       return seller;
     });
   };
+  const resetSellerPassword = (id, password) => {
+    return api.patch(`/farmers/${id}/reset-password`, { password }).then((data) => {
+      const seller = data.farmer;
+      setSellers((prev) => prev.map((entry) => (entry.id === id ? seller : entry)));
+      if (current?.id === id) setCurrent(seller);
+      return seller;
+    });
+  };
   const deleteSeller = (id) => {
     return api.delete(`/farmers/${id}`).then(() => {
       setSellers((prev) => prev.filter((s) => s.id !== id));
@@ -144,6 +152,7 @@ export function SellerAuthProvider({ children }) {
     blockSeller,
     unblockSeller,
     updateSeller,
+    resetSellerPassword,
     deleteSeller,
   };
   return <SellerAuthContext.Provider value={value}>{children}</SellerAuthContext.Provider>;
