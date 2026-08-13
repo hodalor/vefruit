@@ -21,6 +21,9 @@ const orderSchema = new mongoose.Schema(
     requestNote: { type: String, default: '' },
     paystackReference: { type: String, default: '' },
     finalizationStatus: { type: String, default: 'complete' },
+    finalizationOwner: { type: String, default: '' },
+    finalizationLeaseExpiresAt: { type: Date, default: null },
+    finalizationError: { type: String, default: '' },
   },
   { timestamps: true }
 );
