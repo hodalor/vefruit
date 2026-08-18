@@ -1740,7 +1740,7 @@ function FarmerDetailModal({
 
   return (
     <div className="EditOverlay">
-      <div className="EditModal Card AdminModalMedium">
+      <div className="EditModal Card AdminModalMedium DetailModal">
         <div className="CardBody">
           <div className="AdminSectionHeader">
             <div>

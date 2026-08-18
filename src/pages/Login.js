@@ -5,6 +5,7 @@ import { useToast } from '../toast/ToastContext';
 import LoadingButton from '../components/LoadingButton';
 import { useSellerAuth } from '../auth/SellerAuthContext';
 import { api } from '../api/client';
+import PasswordField from '../components/PasswordField';
 
 function Login() {
   const { setAuthenticatedUser, logout: logoutUser } = useUserAuth();
@@ -60,7 +61,11 @@ function Login() {
             </label>
             <label>
               Password
-              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <PasswordField
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+              />
             </label>
             <div className="FormActions">
               <LoadingButton className="Btn" type="submit" loading={submitting} loadingText="Logging in...">

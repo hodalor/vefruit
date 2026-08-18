@@ -4,6 +4,7 @@ import { useSellerAuth } from '../auth/SellerAuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '../toast/ToastContext';
 import LoadingButton from '../components/LoadingButton';
+import PasswordField from '../components/PasswordField';
 
 function Register() {
   const { register } = useUserAuth();
@@ -98,7 +99,12 @@ function Register() {
             </label>
             <label>
               Password
-              <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+              <PasswordField
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                required
+                autoComplete="new-password"
+              />
             </label>
             <label>
               Address

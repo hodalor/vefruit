@@ -995,6 +995,43 @@ input[type="file"] {
 .FormActions { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .AuthTitle { margin: 0 0 0.75rem 0; text-align: center; }
 .AuthSubtle { margin: 0 0 1rem 0; text-align: center; color: #64748b; }
+.PasswordField {
+  position: relative;
+}
+
+.PasswordField input {
+  padding-right: 3rem;
+}
+
+.PasswordToggle {
+  position: absolute;
+  top: 50%;
+  right: 0.7rem;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.PasswordToggle:hover {
+  color: #0f172a;
+}
+
+.PasswordToggle svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .AuthTypeTabs {
   display: flex;
   justify-content: center;
@@ -1058,14 +1095,16 @@ input[type="file"] {
   width: min(100%, calc(100vw - 2rem));
 }
 
+.DetailModal,
 .OrderDetailModal {
-  height: min(80vh, 760px);
-  max-height: min(80vh, 760px);
+  height: min(72vh, 680px);
+  max-height: min(72vh, 680px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+.DetailModal .CardBody,
 .OrderDetailModal .CardBody {
   flex: 1 1 auto;
   min-height: 0;
